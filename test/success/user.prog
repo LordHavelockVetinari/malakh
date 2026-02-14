@@ -1,0 +1,15 @@
+Five -> { User 5 }
+
+Seven -> { User 7 }
+
+Main -> {
+    user := User
+    user [user]...
+    User 1
+    out 2
+    User 3
+    out 4
+    Five
+    out 6
+    Seven
+}

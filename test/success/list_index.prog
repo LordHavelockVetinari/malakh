@@ -1,0 +1,52 @@
+// A very inefficient sorting algorithm.
+
+Merge -> {
+    list1, list2 := in
+    i1 := 0
+    while i2 := [Range [list2 .Length]] {
+        while i1 < [list1 .Length] and [list1 i1] < [list2 i2] {
+            i1 += 1
+        }
+        list1 i1 .Insert [list2 i2]
+        i1 += 1
+    }
+}
+
+Reverse -> {
+    list := in
+    while i := [Range ([list .Length] / 2)] {
+        j := [list .Length] - i - 1
+        ith := [list i]
+        jth := [list j]
+        list i .Set jth
+        list j .Set ith
+    }
+}
+
+Cut -> {
+    list, index := in
+    newList := List
+    while i := [Range ([list .Length] - 1) .Step (-1) .Through index] {
+        newList .Push [list index .Remove]
+    }
+    Reverse newList
+    out newList
+}
+
+Sort -> {
+    list := in
+    if [list .Length] <= 1 {
+        out list
+        stop
+    }
+    list2 := [Cut list ([list .Length] / 2)]
+    Sort list
+    Sort list2
+    Merge list list2
+}
+
+Main -> {
+    l1 := [List::Of 1 6 3 7 3 7 76 356 1 65 1 1 52 62 4 5356 2 7 635 24]
+    Sort l1
+    out [l1 .Each]...
+}

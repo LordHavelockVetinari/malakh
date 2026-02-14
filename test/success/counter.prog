@@ -1,0 +1,41 @@
+Counter -> {
+    count := 0
+    loop {
+        cmd := in
+        else {
+            out count
+            continue
+        }
+        switch cmd {
+        
+        case .Inc:
+            count += 1
+        
+        case .Add:
+            count += in
+        
+        case .AddAll:
+            proc := in
+            while n := [proc] {
+                count += n
+            }
+        
+        case .Reset:
+            count = 0
+
+        }
+    }
+}
+
+Main -> {
+    cnt := Counter
+    out [cnt]
+    cnt .Inc
+    out [cnt] [cnt]
+    cnt .Inc .Reset .Inc .Inc .Inc
+    out [cnt]
+    cnt .Add 7 .Add 8
+    out [cnt]
+    cnt .Reset .AddAll {out 1 2 3}
+    out [cnt]
+}

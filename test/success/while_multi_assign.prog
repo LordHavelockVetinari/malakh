@@ -1,0 +1,50 @@
+AlternatingSum -> {
+    s := 0
+    while a, b := in {
+        s += a
+        s -= b
+    }
+    out s
+}
+
+Countdown -> {
+    i := in
+    while i > 0 {
+        out i
+        i -= 1
+    }
+}
+
+Foo -> {
+    a := 0
+    while (a), b := in, [Countdown a] {
+        out "???"
+    }
+    while (a), b := in, [Countdown a] {
+        out a b
+    }
+    out a
+}
+
+Main -> {
+    a, b, c:
+    while a, b, c = [Range 8] {
+        out a b c
+    }
+    out "endloop" a b c
+    while i, j, k := [Range 3], [Range 2], [Range 100] {
+        out i j k
+    }
+    out [AlternatingSum 8 5 100 4]
+    out [AlternatingSum 8 5 100 4 2]
+    foo := Foo
+    out [foo 10 20] [foo] [foo 30] [foo] [foo 40] [foo] [foo]
+    while x := [foo] {
+        out "???"
+    }
+    foo = Foo
+    out [foo 2 20] [foo] [foo 30] [foo] [foo 40]
+    while x := [foo] {
+        out "???"
+    }
+}

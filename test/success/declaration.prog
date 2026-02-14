@@ -1,0 +1,10 @@
+Main -> {
+    // First, let's create some temporary values.
+    (10*20 + 30*40) * (50*60 + 70*80)
+    foo, bar:
+    out foo bar
+    foo = 1
+    out foo bar
+    bar = 2
+    out foo bar
+}

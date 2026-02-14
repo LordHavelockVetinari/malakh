@@ -1,0 +1,19 @@
+Collatz -> {
+    n := in
+    if n % 2 == 0 {
+        out (n / 2)
+    }
+    else {
+        out (3*n + 1)
+    }
+}
+
+Main -> {
+    q := Queue 1 2 3 4 5
+    while n := [q] {
+        out n
+        if n != 1 {
+            q [Collatz n]
+        }
+    }
+}

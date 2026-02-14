@@ -1,0 +1,271 @@
+Instructions
+============
+
+Each VM instruction is 8 bytes. There are two kinds of instructions:
+two-operand and three-operand (although some of the operands in both kinds may
+be unused).
+
+Internal Data Types:
+--------------------
+
+0: Builtin Process
+1: Process
+2: Small Integer
+3: Integer
+4: Floating-Point Number
+5: String
+6: Symbol
+7: Capture
+
+Encoding:
+---------
+
+Two-operand:
+
+     opcode     arg1      arg2
+    --------  --------  --------
+    16 bytes  16 bytes  32 bytes
+
+Three-operand:
+     opcode     arg1      arg2      arg3
+    --------  --------  --------  --------
+    16 bytes  16 bytes  16 bytes  16 bytes
+
+The dst, src1, and src2 operands represent register indices in the current
+process. Inside a constructor or a variable initializer, they represent indices
+from a special array allocated for that purpose.
+
+The src operand may represent a jump address, an array index, etc.
+
+Instructions:
+=============
+
+General
+-------
+
+const dst, src
+    Copy constant no. src to dst.
+
+move dst, src, _
+    Copy src to dst.
+
+move_from dst, src, index
+    Copy register number index of process src to dst.
+    src must be a process with at least index+1 registers.
+    Undefined behavior if index is out of range.
+
+new dst, src
+    Create a new process of family src and store it in dst.
+
+new_builtin dst, src
+    Create a new process of builtin family src and store it in dst.
+
+stop _, _, _
+    Stop the current process.
+
+return src, _, _
+    Return src from a constructor or variable initializer.
+
+Arithmetic:
+-----------
+
+add dst, src1, src2
+    Perform src1 + src2, and store the result in dst.
+    Throw an error if src1 and/or src2 are not numbers.
+
+subtract dst, src1, src2
+    Perform src1 - src2, and store the result in dst.
+    Throw an error if src1 and/or src2 are not numbers.
+
+multiply dst, src1, src2
+    Perform src1 * src2, and store the result in dst.
+    Throw an error if src1 and/or src2 are not numbers.
+
+divide dst, src1, src2
+    Perform src1 / src2, and store the result in dst.
+    Throw an error if src1 and/or src2 are not numbers,
+    or if src1 and src2 are integers and src2 is 0.
+
+remainder dst, src1, src2
+    Perform src1 % src2, and store the result in dst.
+    Throw an error if src1 and/or src2 are not numbers,
+    or if src1 and src2 are integers and src2 is 0.
+
+Comparison:
+-----------
+
+equals dst, src1, src2
+    Perform src1 == src2, and store the result in dst.
+
+not_equals dst, src1, src2
+    Perform src1 != src2, and store the result in dst.
+
+less_than dst, src1, src2
+    Perform src1 < src2, and store the result in dst.
+    Throw an error if src1 and src2 are not both integers or both strings.
+
+greater_than dst, src1, src2
+    Perform src1 > src2, and store the result in dst.
+    Throw an error if src1 and src2 are not both integers or both strings.
+
+less_equals dst, src1, src2
+    Perform src1 >= src2, and store the result in dst.
+    Throw an error if src1 and src2 are not both integers or both strings.
+
+greater_equals dst, src1, src2
+    Perform src1 >= src2, and store the result in dst.
+    Throw an error if src1 and src2 are not both integers or both strings.
+
+Logical
+-------
+
+not dst, src, _
+    Perform NOT src, and stores the result in dst.
+    Throw an error if src is not a boolean.
+
+xor dst, src1, src2
+    Perform src1 XOR src2, and stores the result in dst.
+    Throw an error if src1 and src2 are not both booleans.
+
+move_bool dst, src, _
+    Copy src to dst.
+    Throw an error if src is not a boolean.
+    (This is used in the implementation of `and` and `or`.)
+
+Jump
+----
+
+jump _, n
+    Jump n instructions forward.
+
+jump_if src, n
+    Jump n instructions forward if src is .True.
+    Throw an error if src is not a boolean.
+
+jump_unless src, n
+    Jump n instructions forward if src is .False.
+    Throw an error if src is not a boolean.
+
+Variables and Constructors
+--------------------------
+
+init _, idx
+    If global variable number idx is uninitialized, initialize it.
+
+load dst, idx
+    Load lazy global variable number idx, and store it in dst.
+    Make sure to run init before this instruction.
+
+store src, idx
+    Store the value of src in global variable number idx.
+    This may run only once per variable, in its initializer.
+
+REMOVED: construct dst, idx
+    Run used-defined constructor number idx, and store the result in dst.
+
+construct_builtin dst, idx
+    Run builtin constructor number idx, and store the result in dst.
+
+Captures
+--------
+
+capture dst, src, _
+    Turn dst into a captured variable.
+    Initialize it with src.
+
+load_capture dst, src, _
+    Load the value of captured variable src into dst.
+    src must be a captured variable.
+
+store_capture dst, src, _
+    Store the value of src into captured variable dst.
+    dst must be a captured variable.
+
+Communication
+-------------
+
+in dst, _, _
+    Read input into dst.
+
+opt_in dst1, dst2, _
+    Read optional input into dst1, if possible.
+    Set dst2 to .True if reading succeeded, or .False otherwise.
+
+
+fork_in dst, _, _
+    Fork and wait for input.
+    In the child process, store input in dst.
+
+out src, _, _
+    Output src.
+
+receive dst, src, _
+    Receive the output of process src, and store it in dst.
+    Throw an error if dst is not a process, or has no output.
+    Do not try to send a no-input signal, that's why no_in exists.
+
+try_receive dst1, dst2, src
+    Try to receive the output of process src, and store it in dst.
+    Set dst2 to .True if reading succeeded, or .False otherwise.
+    Throw an error if src is not a process.
+    Do not try to send a no-input signal, that's why no_in exists.
+
+peek dst, src, _
+    Read the output slot of process src, and store it in dst.
+    Throw an error if dst is not a process, or has no output.
+    Do not try to send a no-input signal, that's why no_in exists.
+
+send dst, src1, src2
+    Send src2 to process src1. Store the src1 (or its child) in dst.
+    Throw an error if src1 is not a process or doesn't want input.
+
+no_in src, _, _
+    Send process dst a no input signal.
+    Throw an error if dst is not a process,
+    but do nothing if its state is not .OptIn.
+
+state dst, src, _
+    Stores the state of process src in dst (as a symbol).
+    src must be a process.
+
+Errors
+------
+
+build_error _, _, _
+    Push a new error builder onto the error builder stack.
+
+append_error src, _, _
+    Append src to the error info of the error builder at the top of the stack.
+    Discard the error builder and throw an error if src is not a string or a
+    symbol.
+
+throw _, _, _
+    Pop an error builder from the stack, build an error, and throw it.
+
+exception_state _, idx
+    Set the current process's exception state to the idx state in the
+    exception state array.
+
+end_finally _, _, _
+    Jump back from a finally block.
+    The return address will be stored in the process's exception state.
+    Change the exception state as specified in the old exception state.
+
+Special
+-------
+
+default_out src, _, _
+    Outputs src to stdout.
+
+default_in dst, _, _
+    Reads a line of input from stdin and writes it to dst.
+
+default_opt_in dst1, dst2, _
+    Reads a line of input from stdin, writes it to dst1, and writes .True to dst2.
+    On failure (due to EOF), writes .False to dst2.
+
+debug src, _, _
+    Print the value of src.
+
+exit _, _, _
+    Exit the program immediately.

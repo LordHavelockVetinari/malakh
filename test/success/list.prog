@@ -1,0 +1,14 @@
+Main -> {
+    list := List
+    push := list .Push
+    push .A .B .C
+    out [list .Each]...
+    out [list .Length]
+    push .D .E
+    out [list .Each]...
+    out [list .Length]
+    list .Clear
+    list .Push 777
+    out [list .Each]...
+    out [list .Length]
+}

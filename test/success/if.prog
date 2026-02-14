@@ -1,0 +1,15 @@
+Main -> {
+    if in == "A" {
+        out "Got A"
+    }
+    if in == "X" {} else {
+        out "Got B"
+    }
+    line := in
+    if line == "X" {
+        out "Got X"
+    }
+    else if line == "C" {
+        out "Got C"
+    }
+}

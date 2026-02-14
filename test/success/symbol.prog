@@ -1,0 +1,5 @@
+Main -> {
+    out .Foo .Bar .Baz
+    out (.Foo == .Foo)
+    out (.Foo == .Bar)
+}

@@ -1,0 +1,92 @@
+Sum -> {
+    s := 0
+    while n := in {
+        s += n
+    }
+    out s
+}
+
+CountEqual -> {
+    eq := in
+    c := 0
+    while x := in {
+        if x == eq {
+            c += 1
+        }
+    }
+    out c
+}
+
+Main -> {
+    size := Map
+    out [size .Length]
+    size "mouse" .Is "small"
+    size "cat" .Is "medium"
+    size "elephant" .Is "tiny"
+    size "elephant" .Set "big"
+    size .At .Whale .Is "small"
+    size .At .Whale .Set "big"
+    out [size "mouse"] [size "cat"] [size "elephant"] [size .At .Whale]
+    out [size .Length]
+    if _ := [size "giraffe"] {
+        out "error: giraffe"
+    }
+    if _ := [size .At "lion"] {
+        out "error: lion"
+    }
+    out [size .HasKey "cat"]
+    out [size .HasKey .Cat]
+    out [size .HasKey "Whale"]
+    out [size .HasKey .Whale]
+    size .Clear
+    if _ := [size "mouse"] {
+        out "error: mouse"
+    }
+    while i := [Range 1000] {
+        switch [String::Length [Cat i]] {
+        
+        case 1:
+            size i .Set "small"
+        
+        case 2:
+            size i .Set "medium"
+        
+        default:
+            size i .Set "large"
+
+        }
+    }
+    out [size .Length]
+    out [size 2]
+    out [size 4]
+    out [size 254]
+    out [size 24]
+    out [size 994]
+    newSize := Map
+    while k, v := [size .Each] {
+        newSize .At k .Is v
+        if v == "large" {
+            newSize .At k .Set "big"
+        }
+    }
+    out [newSize .Length]
+    out [newSize 2]
+    out [newSize 4]
+    out [newSize 254]
+    out [newSize 24]
+    out [newSize 994]
+    out [Sum [newSize .Keys]...]
+    out [CountEqual "small" [newSize .Values]...]
+    out [CountEqual "medium" [newSize .Values]...]
+    out [CountEqual "big" [newSize .Values]...]
+    out [CountEqual "ginormous" [newSize .Values]...]
+    newSize 999 .Remove
+    if _ := [newSize 999] {
+        out "error: 999"
+    }
+    newSize 999 .Is "ginormous"
+    out [newSize 998]
+    out [newSize 999]
+    newSize 998 .Set [newSize 999 .Remove]
+    out [newSize 998]
+}

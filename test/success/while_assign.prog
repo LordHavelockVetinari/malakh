@@ -1,0 +1,55 @@
+Foo -> {
+    out 1 2 3
+}
+
+Divisors -> {
+    n := in
+    i := 1
+    while i <= n {
+        if n % i == 0 {
+            out i
+        }
+        i += 1
+    }
+}
+
+Sum -> {
+    s := 0
+    while n := in {
+        s += n
+    }
+    out s
+}
+
+Last -> {
+    x:
+    while x = in {}
+    out x
+}
+
+Main -> {
+    while x := [Foo] {
+        out x
+    }
+    while x := [Foo] {
+        out x
+    }
+    while n := [Divisors 35] {
+        out n
+    }
+    out [Sum 10 20 30]
+    x := 0
+    while x = [Foo] {
+        x += 1
+        out x
+        x += 1
+    }
+    out x
+    out [Last 70 80 90]
+    p := {out .A .B .C}
+    q := p
+    while sym := [p] {
+        out sym
+    }
+    out (p == q)
+}

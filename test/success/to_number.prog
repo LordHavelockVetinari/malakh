@@ -1,0 +1,12 @@
+Main -> {
+    out [ToNumber 100]
+    out [ToNumber 1234567890987654321234567890987654321234567890987654321234567890987654321234567890987654321]
+    out [ToNumber 1.25]
+    out [ToNumber (-3)]
+    out [ToNumber (-0.0)]
+    out [ToNumber "123"]
+    out [ToNumber "4.5"]
+    out [ToNumber "4.5e3"]
+    out [ToNumber "-0"]
+    out [ToNumber "-0.0"]
+}

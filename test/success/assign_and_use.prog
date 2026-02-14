@@ -1,0 +1,28 @@
+// Previously I had a bug in this kind of places with `and` and `or`.
+Main -> {
+    x := 1
+    x = 2 + x
+    out x
+    x = 5 - x
+    out x
+    x = 7 * x
+    out x
+    x = 56 / x
+    out x
+    x = 15 % x
+    out x
+    x = .True
+    x = .False or x
+    out x
+    x = .False
+    x = .True and x
+    out x
+    x = .True
+    x = .False xor x
+    out x
+    x = 10
+    x = {out (in * 7) 123} x
+    out [x]
+    x = [x]
+    out x
+}

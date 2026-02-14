@@ -1,0 +1,17 @@
+Main -> {
+    x := in
+    switch x {
+    
+    case "recurse":
+        Main 10
+    
+    case 0:
+
+    default:
+        User x
+        Main (x - 1)
+        User x
+        out "???"
+
+    }
+}

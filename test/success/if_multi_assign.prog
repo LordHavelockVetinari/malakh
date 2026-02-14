@@ -1,0 +1,52 @@
+Foo -> {
+    if a, b, c := in {
+        out a b c
+    }
+    y:
+    if x, (y), z := in {
+        out x y z
+    }
+    out y
+    if x, (y), z := in {
+        out "???"
+    }
+    out y
+}
+
+Main -> {
+    if a, b, c := [{out 1 2 3}] {
+        out a b c
+    }
+    y:
+    if x, (y), z := [{out 7 8 9}] {
+        out x y z
+    }
+    out y
+    if x, (y), z := [{out 10 20}] {
+        out "???"
+    }
+    out y
+    foo := Foo
+    foo "a" "b" "c"
+    out [foo] [foo] [foo]
+    foo "x" "y" "z"
+    out [foo] [foo] [foo] [foo]
+    foo "s" "t"
+    out [foo]
+    if x := [foo] {
+        out "???"
+    }
+    else {
+        out "foo"
+    }
+    if a, b, c := [{out 1}], in, [{out 2}] {
+        out a b c
+    }
+    a, b, c:
+    if a, b, c = in, [{out 3}], in {
+        out "???"
+    }
+    else {
+        out a b c
+    }
+}

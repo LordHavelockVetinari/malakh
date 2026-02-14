@@ -1,0 +1,4 @@
+Main -> {
+    s := "abc\t\r\n\"\\\x41\x42\x43\xfFa\uAaAa\U0001fa0000"
+    out [String::Bytes s]...
+}

@@ -1,0 +1,14 @@
+Main -> {
+    while s := in {
+        n := [ToInt s]
+        else {
+            out "bad int"
+            continue
+        }
+        out (n + 5)
+    }
+    out [ToInt 10]
+    out [ToInt (-20)]
+    out [ToInt (3.9)]
+    out [ToInt (-2.8)]
+}

@@ -1,0 +1,19 @@
+[package]
+name = "malakh"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+assert_matches = "1.5.0"
+clap = { version = "4.5.48", features = ["derive"] }
+either = "1.15.0"
+hashbrown = "0.16.1"
+malachite = "0.6.1"
+ryu = "1.0.20"
+thiserror = "2.0.12"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

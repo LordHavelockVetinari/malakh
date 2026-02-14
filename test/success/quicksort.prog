@@ -1,0 +1,46 @@
+Swap -> {
+    list, i, j := in
+    ith := [list i]
+    jth := [list j]
+    list i .Set jth
+    list j .Set ith
+}
+
+Partition -> {
+    list, lo, hi := in
+    pivot := [list hi]
+    i := lo
+    while j := [Range lo .To hi] {
+        if [list j] <= pivot {
+            Swap list i j
+            i += 1
+        }
+    }
+    Swap list i hi
+    out i
+}
+
+Quicksort -> {
+    list, lo, hi := in
+    if lo >= hi or lo < 0 { stop }
+    p := [Partition list lo hi]
+    Quicksort list lo (p - 1)
+    Quicksort list (p + 1) hi
+}
+
+Sort -> {
+    list := in
+    Quicksort list 0 ([list .Length] - 1)
+}
+
+Main -> {
+    list := [List::Of [String::Words [String::FromLines
+        "there once was a man from nantucket"
+        "who kept all his cash in a bucket"
+        "but his daughter named nan"
+        "ran away with a man"
+        "and as for the bucket nantucket"
+    ]]...]
+    Sort list
+    out [list .Each]...
+}

@@ -1,0 +1,7 @@
+Infinity -> "a lot"
+NaN -> "a lot???"
+
+Main -> {
+    out Infinity
+    out NaN
+}

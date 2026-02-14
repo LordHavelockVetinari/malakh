@@ -1,0 +1,39 @@
+MinHeap -> {
+    min := in
+    rest := MinHeap
+    loop {
+        if n := in {
+            if n < min {
+                rest min
+                min = n
+            }
+            else {
+                rest n
+            }
+        }
+        else {
+            out min
+            min = [rest]
+            else {
+                min = in
+            }
+        }
+    }
+}
+
+Main -> {
+    m1 := Map
+    m1 0.0 .Is "zero"
+    m1 1 .Is "one"
+    m1 2 .Is "two"
+    out [MinHeap [m1 .Keys]...]...
+    m1 .Update 3 "three"
+    m1 .Update 4 "four" 5 "five"
+    out [MinHeap [m1 .Keys]...]...
+    out [m1 0] [m1 1] [m1 2] [m1 3] [m1 4] [m1 5]
+    m2 := Map
+    m2 .Update 0 "nil" 2 "pair" 6 "six" 7 "seven"
+    m1 .Update [m2 .Each]...
+    out [MinHeap [m1 .Keys]...]...
+    out [m1 0] [m1 1] [m1 2] [m1 3] [m1 4] [m1 5] [m1 6] [m1 7]
+}

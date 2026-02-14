@@ -1,0 +1,22 @@
+Factorial := {
+    loop {
+        out {
+            n := in
+            if n == 0 {
+                out 1
+            }
+            else {
+                out (n * [[Factorial] (n - 1)])
+            }
+        }
+    }
+}
+
+Main -> {
+    out [[Factorial] 0]
+    out [[Factorial] 1]
+    out [[Factorial] 2]
+    out [[Factorial] 3]
+    out [[Factorial] 4]
+    out [[Factorial] 5]
+}

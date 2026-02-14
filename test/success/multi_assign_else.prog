@@ -1,0 +1,48 @@
+Foo -> {
+    a, b := in
+    else {
+        out "???"
+    }
+    out a b
+    a, b = in
+    else {
+        out a b
+    }
+    a, b = in
+    else {
+        out a b
+    }
+}
+
+Bar -> {
+    a, b := in, in
+    else {
+        out "???"
+    }
+    out a b
+    a, b = in, in
+    else {
+        out a b
+    }
+    a, b = in, in
+    else {
+        out a b
+    }
+}
+
+Main -> {
+    while foobar := [{out Foo Bar}] {
+        foobar 10 20
+        out [foobar] [foobar]
+        foobar 15
+        out [foobar] [foobar] [foobar] [foobar]
+    }
+    a, b, c, d := [{out "foo" "bar"}]
+    else {
+        out a b c d
+    }
+    (a), e, f, (b) := [{out "baz" "quux"}]
+    else {
+        out a e f b
+    }
+}

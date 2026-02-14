@@ -1,0 +1,33 @@
+// This program used to cause a bug.
+// The lines `case percent` and `case s` would overwrite the variables `percent` and `s`.
+
+Fmt -> {
+    format := in
+    percent, s, d := [String::Bytes "%sd"]
+    result := String::FromBytes
+    source := String::Bytes format
+    while c := [source] {
+        if c != percent {
+            result c
+            continue
+        }
+        switch [source] {
+        
+        case percent:
+            result percent
+        
+        case s, d:
+            str := in
+            result [String::Bytes [Cat str]]...
+
+        }
+    }
+    out [result]
+}
+
+Main -> {
+    firstName := "Bilbo"
+    lastName := "Baggins"
+    age := 111
+    out [Fmt "My name is %s %s and I am %d years old." firstName lastName age]
+}

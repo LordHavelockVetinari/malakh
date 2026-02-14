@@ -1,0 +1,10 @@
+User -> {
+    out 777
+}
+
+Stack -> Queue
+
+Main -> {
+    stk := Stack [User] [User] 666 555
+    out [stk]...
+}

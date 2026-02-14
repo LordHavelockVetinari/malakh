@@ -1,0 +1,21 @@
+Main -> {
+    if _ := [String::Slice "Hello, World!"] {
+        out "Error 1"
+    }
+    if _ := [String::Slice "Hello, World!" .From 1 .To] {
+        out "Error 2"
+    }
+    out [String::Slice "abc" .From 1]
+    out [String::Slice "abcdefg" .From 3]
+    out [String::Slice "abcdefg" .From (-8)]
+    out [String::Slice "abcdefg" .From (-8000000000000000000000000000000000000000000000000000000000000000000000000000000)]
+    out [String::Slice "foobar" .To 3]
+    out [String::Slice "foobar" .Through 3]
+    out [String::Slice "elephant" .From 3 .To 7]
+    out [String::Slice "elephant" .Through 2 .From 1]
+    out [String::Slice "elephant" .From (-33333333333333333333333333333333333333333333) .To 4444444444444444444444444444444444444444444444444444444444444]
+    out [String::Slice "elephant" .From 3 .To 3]
+    out [String::Slice "elephant" .From 3 .Through 3]
+    out [String::Slice "elephant" .To 0]
+    out [String::Slice "elephant" .Through 0]
+}

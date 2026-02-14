@@ -1,0 +1,13 @@
+Main -> {
+    i := 11
+    loop {
+        i = i - 1
+        if i == 0 {
+            break
+        }
+        if i % 3 == 0 {
+            continue
+        }
+        out i
+    }
+}

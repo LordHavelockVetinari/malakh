@@ -1,0 +1,55 @@
+MinHeap -> {
+    min := in
+    rest := MinHeap
+    loop {
+        if n := in {
+            if n < min {
+                rest min
+                min = n
+            }
+            else {
+                rest n
+            }
+        }
+        else {
+            out min
+            min = [rest]
+            else {
+                min = in
+            }
+        }
+    }
+}
+
+Main -> {
+    map := Map
+    map (-0.0) .Is "zero"
+    out [map 0]
+    out [map 0.0]
+    map 1 .Is "one"
+    map 18446744073709551616 .Is "2 to the 64"
+    out [map 18446744073709551616.0]
+    out [map 1.0]
+    if _ := [map NaN] {
+        out "??? NaN"
+    }
+    map 1 .Set "uno"
+    out [map 1.0]
+    out [MinHeap [map .Keys]...]...
+    map 0 .Remove
+    map 0 .Is "zero"
+    out [MinHeap [map .Keys]...]...
+    map .At "Foo" .Is "first"
+    map .At .Foo .Is "second"
+    out [map .At "Foo"]
+    out [map .At .Foo]
+    out [map .HasKey 0.0]
+    out [map .HasKey 0]
+    out [map .HasKey NaN]
+    foo := {}
+    bar := {}
+    map foo .Is "foo"
+    map bar .Is "bar"
+    out [map foo]
+    out [map bar]
+}

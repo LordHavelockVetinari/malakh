@@ -1,0 +1,42 @@
+StartsWithB -> {
+    out ([String::Bytes in] == 98)
+}
+
+HasDoubleLetter -> {
+    s := in
+    if s == "" {
+        out .False
+        stop
+    }
+    iter1 := String::Bytes s
+    iter2 := String::Bytes s
+    [iter2]
+    while c1, c2 := [iter1], [iter2] {
+        if c1 == c2 {
+            out .True
+            stop
+        }
+    }
+    out .False
+}
+
+Main -> {
+    animals := [List::Of "bear" "mouse" "crocodile" "butterfly" "giraffe" "llama" "moose" "beaver"]
+    fewerAnimals := [animals .Copy]
+    while i := [Range Infinity] {
+        if i >= [fewerAnimals .Length] { break }
+        while i < [fewerAnimals .Length] and [StartsWithB [fewerAnimals i]] {
+            fewerAnimals i .Remove
+        }
+    }
+    fewerFewerAnimals := [fewerAnimals .Copy]
+    while i := [Range Infinity] {
+        if i >= [fewerFewerAnimals .Length] { break }
+        while i < [fewerFewerAnimals .Length] and [HasDoubleLetter [fewerFewerAnimals i]] {
+            fewerFewerAnimals i .Remove
+        }
+    }
+    out [animals .Each]...
+    out [fewerAnimals .Each]...
+    out [fewerFewerAnimals .Each]...
+}

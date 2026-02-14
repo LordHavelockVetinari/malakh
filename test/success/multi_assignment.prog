@@ -1,0 +1,25 @@
+Add -> {out (in + in)}
+Sub -> {out (in - in)}
+
+Main -> {
+    x, y := 10, 7
+    out x y
+    x, y = [Add x y], [Sub x y]
+    out x y
+    x, y = x + y, x - y
+    out x y
+    x, y = [{out 20 30}]
+    out x y
+    x, y = in
+    out x y
+    x, y = in, in
+    out x y
+    a, b := [{out 50 60}]
+    out a b
+    c, d := in
+    out c d
+    e, f := in, in
+    out e f
+    g, (x), h, (y) := in, [{out 100}], [{out 200}], in
+    out g x h y
+}

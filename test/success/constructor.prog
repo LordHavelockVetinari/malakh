@@ -1,0 +1,8 @@
+Foo -> 10 + 20
+Bar -> Foo * Baz
+Baz -> 3
+Quux -> 1 / 0
+
+Main -> {
+    out Foo Bar Baz
+}

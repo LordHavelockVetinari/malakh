@@ -1,0 +1,43 @@
+Main -> {
+    if x := [{out "foo"}] {
+        out x
+    }
+    if x := [{}] {
+        out "???"
+    }
+    if x := [{out "bar"}] {
+        out x
+    }
+    else {
+        out "???"
+    }
+    if x := [{}] {
+        out "???"
+    }
+    else {
+        out "baz"
+    }
+    if n := in {
+        out n
+    }
+    if n := in {
+        out n
+    }
+    else {
+        out "???"
+    }
+    if n := in {
+        out "???"
+    }
+    if n := in {
+        out "???"
+    }
+    else {
+        out 3
+    }
+    x := "a"
+    if x = [{}] {}
+    out x
+    if x = [{out "b"}] {}
+    out x
+}

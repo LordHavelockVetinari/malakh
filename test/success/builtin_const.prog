@@ -1,0 +1,7 @@
+Main -> {
+    out Infinity
+    out (-Infinity)
+    out NaN
+    out (-NaN)
+    out (NaN == NaN)
+}

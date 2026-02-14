@@ -1,0 +1,27 @@
+New model for compiling optional assignment:
+1. For every existing variable, if it is not the last target, copy it to a new nonzero temporary register.
+   In assign-else, preallocate registers for all new variables, and initialize with .Undefined.
+2. For every target, try assigning its value to it.
+   Write the boolean value to register 0.
+   If register 0 is .False, skip all other optional assignments.
+3. For every pre-existing variable, if it is not the last target, copy its temporary register into it.
+4. Use register 0 to determine if the assignment succeeded.
+
+Example:
+
+if x, (y), z, (w) := in { foo } else { bar }
+
+// move x, .Undefined
+move tmp_y, y, 0
+// move z, .Undefined
+opt_in x, 0, 0
+jump_unless 0, fin
+opt_in y, 0, 0
+jump_unless0, fin
+opt_in z, 0, 0
+jump_unless 0, fin
+opt_in w, 0, 0
+fin:
+move y, tmp_y
+jump_unless else
+

@@ -1,0 +1,29 @@
+Main -> {
+    basicSpanish := [Map::Of
+        "one" .Is "uno"
+        "two" .Is "dos"
+        "three" .Is "tres"
+    ]
+    advancedSpanish := [Map::Of
+        "cat" .Is "gato"
+        "dog" .Is "perro"
+        "mouse" .Is "ratón"
+    ]
+    spanish := [Map::FromPairs [basicSpanish .Each]... [advancedSpanish .Each]...]
+    out [spanish .Length]
+    out [spanish "cat"]
+    out [spanish "one"]
+    out [spanish "two"]
+    out [spanish "three"]
+    out [spanish "dog"]
+    out [spanish "mouse"]
+    fakeSpanish := [spanish .Copy]
+    fakeSpanish "sheep" .Is "sheepo"
+    fakeSpanish "horse" .Is "horso"
+    out [fakeSpanish .Length]
+    out [fakeSpanish "cat"]
+    out [fakeSpanish "three"]
+    out [fakeSpanish "sheep"]
+    out [spanish .HasKey "sheep"]
+    out [fakeSpanish .HasKey "sheep"]
+}

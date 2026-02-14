@@ -1,0 +1,24 @@
+Main -> {
+    out [ToFloat 1.2]
+    out [ToFloat 0]
+    /* TODO:
+        huge := 1
+        while i := [Range 10000] {
+            huge *= 10
+        }
+        out [ToFloat huge]
+    */
+    out [ToFloat "1"]
+    out [ToFloat "1.0"]
+    out [ToFloat "2.0"]
+    out [ToFloat "2.5"]
+    out [ToFloat "-2.5"]
+    out [ToFloat "+2.5"]
+    out [ToFloat "+2.5e2"]
+    out [ToFloat "-inf"]
+    out [ToFloat "+INFINITY"]
+    out [ToFloat "+nAN"]
+    out [ToFloat "-NaN"]
+    out [ToFloat "-0.0"]
+    out "!" [ToFloat "--inf"]... "!"
+}

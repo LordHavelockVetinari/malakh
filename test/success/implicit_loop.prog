@@ -1,0 +1,21 @@
+OneTwoThree -> {
+    out 1 2 3
+}
+
+Sum -> {
+    sum := 0
+    while x := in {
+        sum += x
+    }
+    out sum
+}
+
+NegSum -> {
+    out (-[Sum in...])
+}
+
+Main -> {
+    out [OneTwoThree]... in... [OneTwoThree]... in...
+    out [Sum [{out 1 2 3}]...]
+    out [NegSum [{out 10 20 30}]...]
+}

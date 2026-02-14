@@ -1,0 +1,9 @@
+Main := {
+    out [Process::State (ToInt 1)]
+    out [Process::State Process::State]
+    out [Process::State Stack]
+    out [Process::State Main]
+    out [Process::State {}]
+    out [Process::Peek (ToInt 12.5)]
+    out [Process::State (Process::Peek (ToInt "abc"))]
+}

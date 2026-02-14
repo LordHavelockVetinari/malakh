@@ -1,0 +1,18 @@
+StripSpaces -> {
+    s := in
+    space := [String::Bytes " "]
+    i:
+    while (i), b := [Range Infinity], [String::Bytes s] {
+        if b != space { break }
+    }
+    out [String::Slice s .From i]
+}
+
+Main -> {
+    out [StripSpaces "    cat"]
+    out [StripSpaces "  dog"]
+    out [StripSpaces "mouse   horse"]
+    out [StripSpaces "     "]
+    out [StripSpaces ""]
+    out " cow"
+}

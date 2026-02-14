@@ -1,0 +1,13 @@
+Main -> {
+    kitty := Cat
+    while i := [Range 20] {
+        while j := [Range (19 - i)] {
+            kitty " "
+        }
+        while j := [Range (2*i + 1)] {
+            kitty "^"
+        }
+        out [kitty]
+        kitty "\n"
+    }
+}

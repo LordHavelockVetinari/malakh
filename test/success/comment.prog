@@ -1,0 +1,15 @@
+// This test checks if comments work.
+// Seems to be working.
+Main -> {
+    out 1 // Let's check comments after a statement.
+    out 2 // Yes, they work fine.
+    /* OK, but do multiline comments work? */
+    /* Yes,
+       they do! */
+    /** How about fancy comments
+      * Like this one?
+      */
+    /******************
+    * Yes, they work! *
+    ******************/
+}

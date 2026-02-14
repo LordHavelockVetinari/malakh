@@ -1,0 +1,173 @@
+Range -> {
+    limit := in
+    i := 0
+    while i < limit {
+        out i
+        i += 1
+    }
+}
+
+Node -> {
+    head, tail := in
+    loop {
+        switch in {
+        
+        case .Head:
+            out head
+        
+        case .Tail:
+            out tail
+        
+        case .SetHead:
+            head = in
+        
+        case .SetTail:
+            tail = in
+
+        }
+    }
+}
+
+List -> {
+    node := .None
+    loop {
+        cmd := in
+        switch cmd {
+
+        case .Push:
+            value := in
+            if node == .None {
+                node = Node value .None
+            }
+            else {
+                nd := node
+                while [nd .Tail] != .None {
+                    nd = [nd .Tail]
+                }
+                nd .SetTail (Node value .None)
+            }
+        
+        case .Length:
+            nd := node
+            count := 0
+            while nd != .None {
+                count += 1
+                nd = [nd .Tail]
+            }
+            out count
+        
+        case .Each:
+            nd := node
+            while nd != .None {
+                out [nd .Head]
+                nd = [nd .Tail]
+            }
+        
+        default:
+            nd := node
+            while i := [Range cmd] {
+                nd = [nd .Tail]
+            }
+            out [nd .Head]
+
+        }
+    }
+}
+
+Matrix -> {
+    rows := List
+    loop {
+        cmd := in
+        switch cmd {
+        
+        case .PushRow:
+            rows .Push in
+        
+        case .Width:
+            out [[rows 0] .Length]
+        
+        case .Height:
+            out [rows .Length]
+        
+        case .Each:
+            while row := [rows .Each] {
+                out [row .Each]...
+            }
+        
+        default:
+            i := cmd
+            j := in
+            out [[rows i] j]
+
+        }
+    }
+}
+
+MatrixOf -> {
+    h, w := in
+    matrix := Matrix
+    while i := [Range h] {
+        row := List
+        while j := [Range w] {
+            row .Push in
+        }
+        matrix .PushRow row
+    }
+    out matrix
+}
+
+Row -> {
+    matrix, i := in
+    result := List
+    while j := [Range [matrix .Width]] {
+        result .Push [matrix i j]
+    }
+    out result
+}
+
+Column -> {
+    matrix, j := in
+    result := List
+    while i := [Range [matrix .Height]] {
+        result .Push [matrix i j]
+    }
+    out result
+}
+
+DotProduct -> {
+    u, v := in
+    result := 0
+    while x, y := [u .Each], [v .Each] {
+        result += x * y
+    }
+    out result
+}
+
+MatrixProduct -> {
+    a, b := in
+    w := [b .Width]
+    h := [a .Height]
+    result := Matrix
+    while i := [Range h] {
+        row := List
+        while j := [Range w] {
+            row .Push [DotProduct [Row a i] [Column b j]]
+        }
+        result .PushRow row
+    }
+    out result
+}
+
+Main -> {
+    a := [MatrixOf 2 3
+        1.0 2.0 3.0
+        4.0 5.0 6.0
+    ]
+    b := [MatrixOf 3 4
+        1.5  2.5  3.5  4.5
+        5.5  6.5  7.5  8.5
+        9.5 10.5 11.5 12.5
+    ]
+    p := [MatrixProduct a b]
+    out [p .Height] [p .Width] [p .Each]...
+}

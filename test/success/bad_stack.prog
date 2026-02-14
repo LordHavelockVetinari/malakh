@@ -1,0 +1,42 @@
+BadStack -> {
+    top := .None
+    rest := .None
+    loop {
+        cmd := in
+        if cmd == .Push {
+            x := in
+            if top != .None {
+                if rest == .None {
+                    rest = BadStack
+                }
+                rest .Push top
+            }
+            top = x
+        }
+        else {
+            out top
+            if top != .None {
+                if rest == .None {
+                    top = .None
+                }
+                else {
+                    top = [rest .Pop]
+                }
+            }
+        }
+    }
+}
+
+Main -> {
+    stk := BadStack
+    to_send := in
+    while to_send != "." {
+        stk .Push to_send
+        to_send = in
+    }
+    val := [stk .Pop]
+    while val != .None {
+        out val
+        val = [stk .Pop]
+    }
+}

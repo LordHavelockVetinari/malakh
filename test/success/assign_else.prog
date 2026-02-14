@@ -1,0 +1,43 @@
+InsertionSort -> {
+    first := in
+    rest := InsertionSort
+    loop {
+        ok := .True
+        x := in
+        else {
+            ok = .False
+        }
+        if ok and x < first {
+            rest first
+            first = x
+        }
+        else if ok {
+            rest x
+        }
+        else {
+            out first
+            first = [rest]
+            else {
+                first = in
+            }
+        }
+    }
+}
+
+Main -> {
+    sorted := InsertionSort
+    line := in; else {}
+    while line != .Undefined {
+        line = [{}]; else {}
+        sorted line
+        line = in
+        else {
+            line = .Undefined
+        }
+    }
+    loop {
+        s := [sorted]
+        else { stop }
+        out s
+    }
+}

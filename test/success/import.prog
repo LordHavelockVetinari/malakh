@@ -1,0 +1,15 @@
+import String:: Length, Length as L, FromWords
+
+Main -> {
+    out [Length "spam"]
+    out [String::Length "ham"]
+    out [L "beans"]
+    out [State State]
+    out [FromBytes 123]
+}
+
+FromBytes -> {
+    out (in + 1)
+}
+
+import Process::State

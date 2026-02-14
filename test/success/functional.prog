@@ -1,0 +1,57 @@
+Map -> {
+    iter, f := in
+    while x := [iter] {
+        out [f x]...
+    }
+}
+
+Filter -> {
+    iter, p := in
+    while x := [iter] {
+        if [p x] {
+            out x
+        }
+    }
+}
+
+FoldLeft -> {
+    iter, seed, f := in
+    while x := [iter] {
+        seed = [f seed x]
+    }
+    out seed
+}
+
+FoldRight -> {
+    iter, seed, f := in
+    if x := [iter] {
+        right := [FoldRight iter seed f]
+        out [f x right]
+    }
+    else {
+        out seed
+    }
+}
+
+Main -> {
+    out [Map
+        (Filter
+            (Range (-10) .To 10)
+            { loop { out (in > 0) } }
+        )
+        { loop {
+            x := in
+            out x (-x)
+        } }
+    ]...
+    out [FoldLeft
+        (Queue 1 2 3 4 5)
+        ""
+        { loop { out [Cat "(" in in ")"] } }
+    ]
+    out [FoldRight
+        (Queue 1 2 3 4 5)
+        ""
+        { loop { out [Cat "(" in in ")"] } }
+    ]
+}
