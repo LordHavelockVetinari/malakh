@@ -20,6 +20,13 @@ mod to_float;
 mod to_int;
 mod to_number;
 mod user;
+mod is_int;
+mod is_float;
+mod is_number;
+mod is_string;
+mod is_symbol;
+mod is_bool;
+mod is_process;
 
 pub type ConstantConstructor = fn(&mut VmBuilder) -> u32;
 
@@ -151,6 +158,13 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsBasicAggregator<cat::Cat>>(ROOT_PATH)
         .add_type::<AsBasicAggregator<stack::Stack>>(ROOT_PATH)
         .add_type::<AsBasicAggregator<queue::Queue>>(ROOT_PATH)
+        .add_type::<AsFunction<is_int::IsInt>>(ROOT_PATH)
+        .add_type::<AsFunction<is_float::IsFloat>>(ROOT_PATH)
+        .add_type::<AsFunction<is_number::IsNumber>>(ROOT_PATH)
+        .add_type::<AsFunction<is_string::IsString>>(ROOT_PATH)
+        .add_type::<AsFunction<is_symbol::IsSymbol>>(ROOT_PATH)
+        .add_type::<AsFunction<is_bool::IsBool>>(ROOT_PATH)
+        .add_type::<AsFunction<is_process::IsProcess>>(ROOT_PATH)
         .add_type::<AsBasicFunction<to_int::ToInt>>(ROOT_PATH)
         .add_type::<AsBasicFunction<to_float::ToFloat>>(ROOT_PATH)
         .add_type::<AsBasicFunction<to_number::ToNumber>>(ROOT_PATH)

@@ -83,6 +83,10 @@ impl Value {
         self.as_addr() & Self::PTR_TAG_MASK == Self::BUILTIN_PROCESS_TAG
     }
 
+    pub fn is_process(self) -> bool {
+        self.is_builtin_process() || self.is_user_process()
+    }
+
     pub fn is_symbol(self) -> bool {
         self.as_addr() & Self::PTR_TAG_MASK == Self::SYMBOL_TAG
     }

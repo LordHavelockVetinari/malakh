@@ -140,9 +140,15 @@ pub trait Function: Sized {
 
     fn gc_mark_content(&self, gc: &mut GarbageCollector);
 
-    fn input(&mut self, input: Value, vm: &mut Vm) -> Action;
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
+        _ = (input, vm);
+        panic!("function shouldn't get input")
+    }
 
-    fn no_input(&mut self, vm: &mut Vm) -> Action;
+    fn no_input(&mut self, vm: &mut Vm) -> Action {
+        _ = vm;
+        panic!("function shouldn't request input")
+    }
 
     fn after_output(&mut self, vm: &mut Vm) -> Action {
         let _ = vm;

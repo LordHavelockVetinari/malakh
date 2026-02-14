@@ -79,8 +79,11 @@ Example
         }
     }
 
+Tutorial
+========
+
 Missing Features
-================
+----------------
 
 Before you read the tutorial, it's important that you know that
 some features mentioned in the tutorial are not yet implemented.
@@ -100,11 +103,6 @@ Hopefully, they will all be added soon:
 - `Assert`.
 - `String::FromCharCodes`, `String::CharCodes`.
 - `list .Pop`.
-- Type-query processes: `IsInt`, `IsFloat`, `IsNumber`, `IsString`,
-  `IsSymbol`, `IsBool`, `IsProcess`.
-
-Tutorial
-========
 
 Output
 -------------
