@@ -52,8 +52,8 @@ Learning
 A tutorial will be added soon...
 For now, check out the examples in test/success.
 
-Running Malakh Programs
------------------------
+Running Malakh Code
+-------------------
 
 To run a Malakh program, follow these steps:
 1. Download the repository and compile it using Cargo (`cargo build`).
