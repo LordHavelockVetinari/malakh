@@ -4,6 +4,7 @@ mod each;
 mod index;
 mod length;
 pub mod of;
+mod pop;
 mod push;
 
 use crate::builtin::helper;
@@ -18,6 +19,7 @@ pub struct List {
 helper::define_class!(
     LENGTH => self::length::Length,
     PUSH => self::push::Push,
+    POP => self::pop::Pop,
     EACH => self::each::Each,
     CLEAR => self::clear::Clear,
     COPY => self::copy::Copy,

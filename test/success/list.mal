@@ -8,7 +8,12 @@ Main -> {
     out [list .Each]...
     out [list .Length]
     list .Clear
-    list .Push 777
+    list .Push 666
     out [list .Each]...
+    out [list .Length]
+    list .Push 777 888
+    out [list .Pop]
+    list .Push 999
+    out [list .Pop] [list .Pop] [list .Pop]
     out [list .Length]
 }

@@ -80,6 +80,7 @@ builtin_symbols!(
     STEP = .Step,
     LENGTH = .Length,
     PUSH = .Push,
+    POP = .Pop,
     EACH = .Each,
     SET = .Set,
     INSERT = .Insert,

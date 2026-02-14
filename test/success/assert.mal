@@ -1,0 +1,6 @@
+Main -> {
+    // TODO: check failed assertions after implementing error-handling.
+    Assert (1 + 1 == 2)
+    Assert [IsNumber 3.4]
+    Assert (not [IsString .Symbol])
+}

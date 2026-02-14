@@ -6,9 +6,17 @@ use crate::builtin::helper::{AsBasicAggregator, AsBasicFunction, AsFunction};
 use crate::vm::builder::VmBuilder;
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessFamily};
 
+mod assert;
 mod cat;
 mod constants;
 mod helper;
+mod is_bool;
+mod is_float;
+mod is_int;
+mod is_number;
+mod is_process;
+mod is_string;
+mod is_symbol;
 mod list;
 mod map;
 mod process;
@@ -20,13 +28,6 @@ mod to_float;
 mod to_int;
 mod to_number;
 mod user;
-mod is_int;
-mod is_float;
-mod is_number;
-mod is_string;
-mod is_symbol;
-mod is_bool;
-mod is_process;
 
 pub type ConstantConstructor = fn(&mut VmBuilder) -> u32;
 
@@ -169,6 +170,7 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsBasicFunction<to_float::ToFloat>>(ROOT_PATH)
         .add_type::<AsBasicFunction<to_number::ToNumber>>(ROOT_PATH)
         .add_type::<AsFunction<range::Range>>(ROOT_PATH)
+        .add_type::<AsFunction<assert::Assert>>(ROOT_PATH)
         .add_type_init::<list::List>(ROOT_PATH, list::init)
         .add_module_to_root("List")
         .add_type::<AsFunction<list::of::Of>>("List")

@@ -100,9 +100,7 @@ Hopefully, they will all be added soon:
 - The exponentiation operator (`^`).
 - Mathematical processes (`Sum`, `Product`, `Sin`, etc.).
 - `MinHeap` and `MaxHeap`.
-- `Assert`.
 - `String::FromCharCodes`, `String::CharCodes`.
-- `list .Pop`.
 
 Output
 -------------
