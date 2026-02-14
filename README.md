@@ -35,7 +35,7 @@ And here's a class (named `ComplexNumber`, with methods `.RealPart` and `.Imagin
         }
     }
 
-Clearly, there's very little difference between the two definitions. Here's how you might use these definitions:
+As you can see, there's very little difference between the two definitions. Here's how you might use these definitions:
 
     Main -> {
         // Print the maximum of 10 and 20:
