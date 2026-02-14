@@ -18,7 +18,7 @@ Here's a function definition in Malakh:
         }
     }
 
-And here's a class (named `ComplxNumber`, with methods `.RealPart` and `.ImaginaryPart`):
+And here's a class (named `ComplexNumber`, with methods `.RealPart` and `.ImaginaryPart`):
 
     ComplexNumber -> {
         real, imag := in
