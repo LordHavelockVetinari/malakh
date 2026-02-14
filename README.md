@@ -52,6 +52,16 @@ Learning
 A tutorial will be added soon...
 For now, check out the examples in test/success.
 
+Running Malakh Programs
+-----------------------
+
+To run a Malakh program, follow these steps:
+1. Download the repository and compile it using Cargo (`cargo build`).
+2. Write your program in a .mal file. Your program must contain a process called `Main`.
+3. Run `cargo run -- path_to_program.mal`.
+   - Alternatively, run `path_to_executable path_to_program.mal`, where `path_to_executable` is something like `./target/debug/malakh.exe` (you may move or rename the executable however you like).
+4. Now the `Main` process should start running. Congratulations!
+
 The Name Malakh
 ---------------
 
