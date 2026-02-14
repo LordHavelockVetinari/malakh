@@ -49,8 +49,8 @@ As you can see, there's very little difference between the two definitions. Here
 Learning
 --------
 
-A tutorial will be added soon...
-For now, check out the examples in test/success.
+There's an (incomplete) tutorial in [doc.md](doc.md). More documentation will hopefully be added soon.
+For now, you can check out some examples in [./test/success](./test/success).
 
 Running Malakh Code
 -------------------
