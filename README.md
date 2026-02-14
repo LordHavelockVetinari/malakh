@@ -1,2 +1,53 @@
-# malakh
-An odd programming language.
+Malakh
+======
+
+Malakh is an new programming language, centered around the idea of "processes". Processes are a new concept invented in Malakh, which unifies the notions of "functions" and "classes". A process can act like a function, an object, or both – or like many things that don't exist in other languages.
+
+Example
+-------
+
+Here's a function definition in Malakh:
+
+    Max -> {
+        a, b := in
+        if a >= b {
+            out a
+        }
+        else {
+            out b
+        }
+    }
+
+And here's a class (named `ComplxNumber`, with methods `.RealPart` and `.ImaginaryPart`):
+
+    ComplexNumber -> {
+        real, imag := in
+        loop {
+            switch in {
+            
+            case .RealPart:
+                out real
+
+            case .ImaginaryPart:
+                out imag
+            
+            }
+        }
+    }
+
+Clearly, there's very little difference between the two definitions. Here's how you might use these definitions:
+
+    Main -> {
+        // Print the maximum of 10 and 20:
+        out [Max 10 20]
+        // Define i (the square root of -1):
+        i := ComplexNumber 0.0 1.0
+        // Print the real part and the imaginary part of i:
+        out [i .RealPart] [i .ImaginaryPart]
+    }
+
+Learning
+--------
+
+A tutorial will be added soon...
+For now, check out the examples in test/success.
