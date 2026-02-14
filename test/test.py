@@ -28,12 +28,12 @@ def print_indented(b: bytes):
     print(textwrap.indent(b.decode("utf-8", errors="replace"), " " * 4))
 
 def do_job(name):
-    progfile = name + ".prog"
+    malfile = name + ".mal"
     input = read(name + ".in")
     output = read(name + ".out")
     error = read(name + ".err")
     completed = subprocess.run(
-        [EXECUTABLE, progfile],
+        [EXECUTABLE, malfile],
         input=input,
         stdout=PIPE,
         stderr=PIPE,
@@ -77,9 +77,9 @@ def main():
     subprocess.run("cargo build", check=True, stderr=DEVNULL)
     dir = os.path.join(os.path.dirname(__file__), "success")
     os.chdir(dir)
-    for progfile in os.listdir(dir):
-        name, ext = os.path.splitext(progfile)
-        if ext != ".prog":
+    for malfile in os.listdir(dir):
+        name, ext = os.path.splitext(malfile)
+        if ext != ".mal":
             continue
         num_tests += 1
         job_queue.put(name)
