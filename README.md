@@ -51,3 +51,9 @@ Learning
 
 A tutorial will be added soon...
 For now, check out the examples in test/success.
+
+The Name Malakh
+---------------
+
+In ancient Hebrew, "malakh" means a messenger – a fitting name for a language that's all about sending messages between different entities (processes).
+In modern Hebrew, "malakh" means an angel.
