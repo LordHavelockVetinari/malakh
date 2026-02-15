@@ -1,20 +1,12 @@
-Product -> {
-    product := 1
-    loop {
-        x := in
-        else {
-            out product
-            continue
-        }
-        product *= x
-    }
-}
-
 Main -> {
-    i := 1
-    product := Product
-    while i <= 10 {
-        out [product i]
-        i += 1
-    }
+    out [Math::Product 1 2 3]
+    out [Math::Product [Range 1 .Through 10]...]
+    out [Math::Product]
+    out [Math::Product 1.0]
+    out [Math::Product 1 2.0 3]
+    out [Math::Product 1 2 NaN 3.0]
+    p := Math::Product 10
+    p 20
+    out [p]
+    out [p 30] [p]
 }

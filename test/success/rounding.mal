@@ -1,0 +1,24 @@
+Main -> {
+    out [Math::Round 1.3]
+    out [Math::Round (-1.3)]
+    out [Math::Round 1.8]
+    out [Math::Round (-1.8)]
+    out [Math::Round 1.5]
+    out [Math::Round (-1.5)]
+    out [Math::Round (4.5)]
+    out [Math::Round (-4.5)]
+    out [Math::Round (0.0)]
+    out [Math::Round (-0.0)]
+
+    out [Math::Floor 1.8]
+    out [Math::Floor 1.3]
+    out [Math::Floor 0.0]
+    out [Math::Floor (-4.7)]
+    out [Math::Floor (-10.1)]
+
+    out [Math::Ceil 1.8]
+    out [Math::Ceil 1.3]
+    out [Math::Ceil 0.0]
+    out [Math::Ceil (-4.7)]
+    out [Math::Ceil (-10.1)]
+}

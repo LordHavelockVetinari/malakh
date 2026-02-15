@@ -1,0 +1,10 @@
+Main -> {
+    out [Math::Norm 3 4]
+    out [Math::Norm 6.0 8]
+    n := Math::Norm
+    out [n]
+    n 1 1 1 1
+    out [n]
+    n 1.0 2
+    out [n] [n]
+}

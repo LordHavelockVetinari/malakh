@@ -1,0 +1,20 @@
+Product -> {
+    product := 1
+    loop {
+        x := in
+        else {
+            out product
+            continue
+        }
+        product *= x
+    }
+}
+
+Main -> {
+    i := 1
+    product := Product
+    while i <= 10 {
+        out [product i]
+        i += 1
+    }
+}

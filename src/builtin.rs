@@ -19,6 +19,7 @@ mod is_string;
 mod is_symbol;
 mod list;
 mod map;
+mod math;
 mod max;
 mod min;
 mod process;
@@ -184,6 +185,14 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_module_to_root("Map")
         .add_type::<AsFunction<map::of::Of>>("Map")
         .add_type::<AsFunction<map::from_pairs::FromPairs>>("Map")
+        .add_module_to_root("Math")
+        .add_type::<AsBasicAggregator<math::product::Product>>("Math")
+        .add_type::<AsBasicAggregator<math::mean::Mean>>("Math")
+        .add_type::<AsBasicAggregator<math::norm::Norm>>("Math")
+        .add_type::<AsFunction<math::abs::Abs>>("Math")
+        .add_type::<AsFunction<math::round::Round>>("Math")
+        .add_type::<AsFunction<math::floor::Floor>>("Math")
+        .add_type::<AsFunction<math::ceil::Ceil>>("Math")
         .add_module_to_root("String")
         .add_type::<AsBasicFunction<string::length::Length>>("String")
         .add_type::<AsBasicFunction<string::bytes::Bytes>>("String")

@@ -1,0 +1,14 @@
+Main -> {
+    out [Math::Mean 1 2]
+    out [Math::Mean 10 20]
+    if _ := [Math::Mean] {
+        out "???"
+    }
+    m := Math::Mean
+    m 30 40
+    out [m]
+    out [m 50 60]
+    out [m]
+    out [m Infinity]
+    out [m NaN]
+}

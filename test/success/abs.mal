@@ -1,0 +1,13 @@
+Main -> {
+    out [Math::Abs 1]
+    out [Math::Abs 0]
+    out [Math::Abs (-300)]
+    out [Math::Abs (-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)]
+    out [Math::Abs 34.5]
+    out [Math::Abs (-12.625)]
+    out [Math::Abs 0.0]
+    out [Math::Abs (-0.0)]
+    out [Math::Abs NaN]
+    out [Math::Abs Infinity]
+    out [Math::Abs (-Infinity)]
+}
