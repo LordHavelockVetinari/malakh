@@ -1,0 +1,30 @@
+Main -> {
+    out [Min 1 2 3]
+    out [Min 3 2 1]
+    if _ := [Min] {
+        out "???"
+    }
+    out [Min 7.0]
+    out [Min 7.0 (-3)]
+    out [Min "foo" "bar"]
+    m := Min
+    m "crocodile" "mouse"
+    out [m]
+    m "goldfish" "armadillo"
+    out [m] [m]
+
+    
+    out [Max 1 2 3]
+    out [Max 3 2 1]
+    if _ := [Max] {
+        out "???"
+    }
+    out [Max 7.0]
+    out [Max 7.0 (-3)]
+    out [Max "foo" "bar"]
+    m = Max
+    m "crocodile" "mouse"
+    out [m]
+    m "goldfish" "armadillo"
+    out [m] [m]
+}

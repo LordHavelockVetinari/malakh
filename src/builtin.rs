@@ -19,11 +19,14 @@ mod is_string;
 mod is_symbol;
 mod list;
 mod map;
+mod max;
+mod min;
 mod process;
 mod queue;
 mod range;
 mod stack;
 mod string;
+mod sum;
 mod to_float;
 mod to_int;
 mod to_number;
@@ -157,6 +160,9 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_constant(ROOT_PATH, "NaN", constants::nan)
         .add_type::<AsBasicAggregator<user::User>>(ROOT_PATH)
         .add_type::<AsBasicAggregator<cat::Cat>>(ROOT_PATH)
+        .add_type::<AsBasicAggregator<sum::Sum>>(ROOT_PATH)
+        .add_type::<AsBasicAggregator<min::Min>>(ROOT_PATH)
+        .add_type::<AsBasicAggregator<max::Max>>(ROOT_PATH)
         .add_type::<AsBasicAggregator<stack::Stack>>(ROOT_PATH)
         .add_type::<AsBasicAggregator<queue::Queue>>(ROOT_PATH)
         .add_type::<AsFunction<is_int::IsInt>>(ROOT_PATH)

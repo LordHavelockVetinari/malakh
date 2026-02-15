@@ -1,0 +1,10 @@
+Main -> {
+    out [Sum]
+    out [Sum 1 2 3]
+    out [Sum 7.0 2.0 13]
+    s := Sum
+    s 1 2
+    out [s]
+    s 3 4
+    out [s] [s]
+}

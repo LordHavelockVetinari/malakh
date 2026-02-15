@@ -98,7 +98,8 @@ Hopefully, they will all be added soon:
 - Bare blocks (`{ ... }` as a statement).
 - Binary and hexadecimal numbers.
 - The exponentiation operator (`^`).
-- Mathematical processes (`Sum`, `Product`, `Sin`, etc.).
+- Mathematical processes (`Sum`, `Math::Product`, `Math::Sin`, etc.).
+- `Data::Count`.
 - `MinHeap` and `MaxHeap`.
 - `String::FromCharCodes`, `String::CharCodes`.
 
@@ -196,23 +197,24 @@ here are a few useful processes:
             // Note that you need parentheses around negative numbers:
             out [Sum 10 (-2)]   // Output: 8
         }
-- `Product` is similar to `Sum`, but finds the product.
-- `Mean` finds the mean (average).
+- `Math::Product` is similar to `Sum`, but finds the product.
+- `Math::Mean` finds the mean (average).
 - `Min` and `Max` find the minimum and maximum, respectively.
-- `Abs` finds the absolute value of a number. For example:
+- `Math::Abs` finds the absolute value of a number. For example:
 
         Main -> {
-            out [Abs (-3)]               // Output: 3
-            out [Abs 5]                  // Output: 5
-            out [Abs [Mean (-10) (-20)]] // Output: 15
+            out [Math::Abs (-3)]                     // Output: 3
+            out [Math::Abs 5]                        // Output: 5
+            out [Math::Abs [Math::Mean (-10) (-20)]] // Output: 15
         }
-- `Round` rounds a number to the nearest integer.
-  `Floor` rounds a number down, and `Ceil` rounds it up.
-- `Sin` finds the sine of an angle (in radians).
-  `Cos`, `Tan`, `Cot`, `Asin`, `Acos`, `Atan` and `Acot` are similar.
-- `Exp` computes `e^x`.
-- `[Log x]` is the natural logarithm of `x`.
-  `[Log b x]` is the logarithm of `x` to base `b`.
+- `Math::Round` rounds a number to the nearest integer.
+  `Math::Floor` rounds a number down, and `Math::Ceil` rounds it up.
+- `Math::Sin` finds the sine of an angle (in radians).
+  `Math::Cos`, `Math::Tan`, `Math::Cot`, `Math::Asin`, `Math::Acos`,
+  `Math::Atan` and `Math::Acot` are similar.
+- `Math::Exp` computes `e^x`.
+- `[Math::Log x]` is the natural logarithm of `x`.
+  `[Math::Log b x]` is the logarithm of `x` to base `b`.
 
 Variables
 ---------
@@ -962,13 +964,13 @@ Now is a good time to recall the mathematical processes we have seen earlier,
 such as:
 
     Main -> {
-        out [Sin 3.14]  // Output: 0.00159265291648683
-        out [Sum 1 2 3] // Output: 6
+        out [Math::Sin 3.14]  // Output: 0.00159265291648683
+        out [Math::Sum 1 2 3] // Output: 6
     }
 
 Now you can finally understand how these work!
-for example, in the expression `[Sin 3.14]`,
-we send the number 3.14 to the process `Sin`,
+for example, in the expression `[Math::Sin 3.14]`,
+we send the number 3.14 to the process `Math::Sin`,
 and then read its output &ndash; which is the sine of 3.14.
 
 Process Constructor
@@ -998,7 +1000,7 @@ As we will see soon, it is very useful to have multiple instances
 of the same process in a program
 (possibly with multiple instances running simultaneously).
 This is why we almost always define processes inside of a constructor.
-This is also why all the mathematical processes (like `Sin`, `Sum`, etc.)
+This is also why all the mathematical processes (like `Math::Sin`, `Sum`, etc.)
 are actually constructors.
 
 Example &ndash; Processes in Action
@@ -1287,18 +1289,18 @@ You can use a *receive* expression to get the current state of the aggregator.
 `Sum` is in fact a builtin process in Malakh.
 Here are a few other builtin aggregators:
 
-- `Product`: finds the product of its inputs. For example:\
-  `Assert ([Product 2 3] == 6)`.
-- `Mean`: finds the mean (average) of its inputs. For example:\
-  `Assert ([Mean 10 8] == 9.0)`
+- `Math::Product`: finds the product of its inputs. For example:\
+  `Assert ([Math::Product 2 3] == 6)`.
+- `Math::Mean`: finds the mean (average) of its inputs. For example:\
+  `Assert ([Math::Mean 10 8] == 9.0)`
 - `Min`: finds the minimum of its inputs.
   The inputs may be either numbers or strings, but not both.
   For example:\
   `Assert ([Min 6 2 7] == 2)`.
 - `Max`: finds the maximum of its inputs. Similar to `Min`.
-- `Count`: finds the number of inputs it has received.
+- `Data::Count`: finds the number of inputs it has received.
   For example:\
-  `Assert ([Count "foo" .bar .Baz] == 3)`
+  `Assert ([Data::Count "foo" .bar .Baz] == 3)`
 
 String Processes
 ----------------
