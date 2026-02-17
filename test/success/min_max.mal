@@ -12,6 +12,9 @@ Main -> {
     out [m]
     m "goldfish" "armadillo"
     out [m] [m]
+    out [Min NaN NaN]
+    out [Min 3 NaN]
+    out [Min NaN 3]
 
     
     out [Max 1 2 3]
@@ -27,4 +30,7 @@ Main -> {
     out [m]
     m "goldfish" "armadillo"
     out [m] [m]
+    out [Max NaN NaN]
+    out [Max 3 NaN]
+    out [Max NaN 3]
 }

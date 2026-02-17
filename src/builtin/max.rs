@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::builtin::helper;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
@@ -28,18 +30,18 @@ impl helper::BasicAggregator for Max {
             let Ok(ord) = acc.compare(value) else {
                 todo!("type error");
             };
-            let Some(ord) = ord else {
-                todo!("NaN in Max");
-            };
-            if ord.is_lt() {
+            if ord == Some(Ordering::Less) || (ord.is_none() && !acc.is_nan()) {
+                #[cfg(debug_assertions)]
+                {
+                    if ord.is_none() && !acc.is_nan() {
+                        assert!(value.is_nan());
+                    }
+                }
                 *acc = value;
             }
         } else {
             if !(value.is_number() || value.is_string()) {
                 todo!("type error");
-            }
-            if value.is_nan() {
-                todo!("NaN in Max")
             }
             self.accumulator = Some(value);
         }
