@@ -1,0 +1,27 @@
+Main -> {
+    out [Math::IsNaN NaN]
+    out [Math::IsNaN (-NaN)]
+    out [Math::IsNaN Infinity]
+    out [Math::IsNaN 3]
+    out [Math::IsNaN (-17.6)]
+    out [Math::IsNaN "NaN"]
+    out [Math::IsNaN (0.0 / 0)]
+    out "---"
+    out [Math::IsInfinite NaN]
+    out [Math::IsInfinite Infinity]
+    out [Math::IsInfinite (-Infinity)]
+    out [Math::IsInfinite (-500)]
+    out [Math::IsInfinite 3.0]
+    out [Math::IsInfinite [ToInt [Cat [Range 300]...]]]
+    out [Math::IsInfinite [ToFloat [Cat [Range 300]...]]]
+    out [Math::IsInfinite {out Infinity}]
+    out "---"
+    out [Math::IsFinite NaN]
+    out [Math::IsFinite Infinity]
+    out [Math::IsFinite (-Infinity)]
+    out [Math::IsFinite (-500)]
+    out [Math::IsFinite 3.0]
+    out [Math::IsFinite [ToInt [Cat [Range 300]...]]]
+    out [Math::IsFinite [ToFloat [Cat [Range 300]...]]]
+    out [Math::IsFinite "foo"]
+}

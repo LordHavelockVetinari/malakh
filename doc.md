@@ -98,7 +98,6 @@ Hopefully, they will all be added soon:
 - Bare blocks (`{ ... }` as a statement).
 - Binary and hexadecimal numbers.
 - The exponentiation operator (`^`).
-- Mathematical processes (`Sum`, `Math::Product`, `Math::Sin`, etc.).
 - `Data::Count`.
 - `MinHeap` and `MaxHeap`.
 - `String::FromCharCodes`, `String::CharCodes`.

@@ -4,4 +4,6 @@ Main -> {
     out NaN
     out (-NaN)
     out (NaN == NaN)
+    out [Math::Round (Math::Pi * 1000)]
+    out [Math::Round (Math::E * 1000)]
 }
