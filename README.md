@@ -65,5 +65,5 @@ To run a Malakh program, follow these steps:
 The Name Malakh
 ---------------
 
-In ancient Hebrew, "malakh" means a messenger – a fitting name for a language that's all about sending messages between different entities (processes).
+In ancient Hebrew, "malakh" means a messenger. Malakh is a language that's all about sending messages between different entities (processes), so the name is fitting.
 In modern Hebrew, "malakh" means an angel.
