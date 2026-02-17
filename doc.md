@@ -108,7 +108,7 @@ A program can also write multiple outputs:
     }
 
 This program outputs the numbers 1, 2 and 3, each on a separate line.\
-We can also write the same program like this:
+You can also write the same program like this:
 
     Main -> {
         out 1 2 3
