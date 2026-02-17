@@ -1,4 +1,4 @@
-Malakh
+About Malakh
 =================
 **Draft**
 
@@ -61,24 +61,6 @@ which makes those languages very complex.
 Malakh's processes can do all of these things and many more,
 with a simple, consistent syntax.
 
-Example
--------
-
-    // This program reads the user's input and reverses it.
-
-    // The Main process is responsible for communicating with the user.
-    Main -> {
-        // Create a stack, and push all lines of input onto it.
-        inputStack := Stack
-        while line := in {
-            inputStack line
-        }
-        // Pop all values off the stack, and output them.
-        while line := [inputStack] {
-            out line
-        }
-    }
-
 Tutorial
 ========
 
@@ -94,6 +76,7 @@ Hopefully, they will all be added soon:
 - Forking (`fork in`), except in builtin processes (e.g. `List`).
 - Local constructors.
 - Accessing local variables from nested processes.
+- Assignment to `_`.
 - Error handling (`err`, `throw`, `try`, `catch`, `finally`).
 - Bare blocks (`{ ... }` as a statement).
 - Binary and hexadecimal numbers.
@@ -103,7 +86,8 @@ Hopefully, they will all be added soon:
 - `String::FromCharCodes`, `String::CharCodes`.
 
 Output
--------------
+------
+
 Let's start with the famous "Hello, World!" program.
 In this program, we define the `Main` process,
 which is responsible for communicating with the user.
@@ -721,11 +705,11 @@ The meaning of the `in` and `out` commands is different than in the `Main`
 process.
 
 When a process (other than `Main`) encounters an `in` command,
-it stops running and waits for someone to send it input.
+it pauses and waits for someone to send it input.
 This "someone" won't be the user, but rather, another process
 will have to send it input.
 Once the process receives its input,
-It will continue running from the point where it stopped.
+It will resume running from the point where it stopped.
 We'll see later how to send input to a process.
 
 For output, each process has a special "output slot",
@@ -733,11 +717,11 @@ where it stores its outputs.
 When a process (other than `Main`) encounters an `out` statement,
 it takes the value it intends to output,
 and places it in its output slot.
-Then, it stops running until someone reads the output.
+Then, it pauses until someone reads the output.
 When another process reads that output,
 that process empties the first process's output slot, and notifies it that it
 can continue running.
-Then, the first process continues running from the point where it stopped
+Then, the first process resumes running from the point where it stopped
 (immediately after the `out` command).
 
 If a process outputs multiple values at the same time
@@ -1073,8 +1057,8 @@ This program outputs all the prime numbers up to 100.
 Range
 -----
 
-`Range` is a very handy builtin process.
-It outputs all the numbers in a given range.
+`Range` is a very handy builtin process,
+which outputs all the numbers in a given range.
 You can use `Range` in a number of ways:
 
 `Range n`: outputs all the numbers from 0 to `n`, excluding `n`:
@@ -1133,7 +1117,7 @@ you'll get a range that goes backwards:
 While Statement with Receive Expression
 ---------------------------------------
 
-There is another form of a `while` loop:
+There is another form of `while` loop:
 `while x := [process]` or `while x = [process]`.
 In this kind of a `while` loop,
 we repeatedly read the outputs of the given process, until we fail to read.
@@ -1163,12 +1147,12 @@ So the above example could also be written:
         }
     }
 
-(An important thing to note about this kind of loops is that
+(An important thing to note about this kind of loop is that
 even though we poll the process in the brackets (`[process]`) for output
 multiple times, we create it only once.
-So in the above example, we create only one `Range` process,
-and pass it the inputs `1 .Through 3` once.
-Then we poll it multiple times to get the outputs `1 2 3`.)
+So in the above example, the program created only one `Range` process,
+and passed it the inputs `1 .Through 3` once.
+Then it polled it multiple times to get the outputs `1 2 3`.)
 
 Talking to the User
 -------------------
@@ -1285,7 +1269,7 @@ and stores some kind of statistics or information about all the inputs
 it has read so far.
 You can use a *receive* expression to get the current state of the aggregator.
 
-`Sum` is in fact a builtin process in Malakh.
+In fact, there already is a builtin `Sum` process in Malakh.
 Here are a few other builtin aggregators:
 
 - `Math::Product`: finds the product of its inputs. For example:\
@@ -1306,20 +1290,19 @@ String Processes
 
 `Cat` is an aggregator that creates a string.
 `Cat` takes any number of inputs,
-and creates a string by concatenating them.
-For example:
+and creates a string by concatenating them:
 
     Main -> {
-        out [Cat "Hello, " "World!"] // Output: Hello, World!
-        out [Cat .Hello .World]      // Output: HelloWorld
-        out [Cat 1 2 3]              // Output: 123
+        out [Cat "Hello, " "World!"]  // Output: Hello, World!
+        out [Cat .Hello .World]       // Output: HelloWorld
+        out [Cat 1 2 3]               // Output: 123
         name := Cat
         name "B" "I" "N" "G" "O"
-        out [name " was his name"]   // Output: BINGO was his name
+        out [name " was his name-O"] // Output: BINGO was his name-O
     }
 
 `String::Length` is a process that gets the length of a string
-(in bytes). For example:
+(in bytes):
 
     Main -> {
         Assert ([String::Length "foo"] == 3)
@@ -1330,8 +1313,7 @@ For example:
 `String::FromCharCodes` is an aggregator that
 creates a string from character codes.
 It gets any number of integers, which represent Unicode characters,
-and converts them to a string.
-For example:
+and converts them to a string:
 
     Main -> {
         out [String::FromCharCodes 97 98 99] // Output: abc
@@ -1339,8 +1321,7 @@ For example:
     }
 
 `String::CharCodes` is the opposite of `String::FromCharCodes`.
-It outputs all the character codes in a string.
-For example:
+It outputs all the character codes in a string:
 
     Main -> {
         chars := String::CharCodes "abc"
@@ -1355,7 +1336,7 @@ Simple Data Structures
 ----------------------
 
 Data structure are a special family of processes,
-which can store data provided to them.
+which are used to store data.
 
 ### Stack
 One of the simplest data structures is a `Stack`.
@@ -1542,10 +1523,10 @@ albeit much slower:
         }
     }
 
-Note that this definition of `MinHeap` is very odd,
+*Note*: this definition of `MinHeap` is very odd,
 and not at all what we typically write in Malakh.
 But if you understand this definition,
-it means you really understood the topics in this tutorial well.
+it means you really understand the topics in this tutorial well.
 
 Switch Statement
 ----------------
@@ -1574,7 +1555,7 @@ For example:
         }
     }
 
-If none of the cases matches the value, the process crashes.
+If none of the cases match the value, the process crashes.
 You can avoid that by providing a `default` case,
 which runs when none of the other `case`s match:
 
@@ -1609,7 +1590,7 @@ The `switch` statement simply ends once one of its
 `case`s (or `default`) ends.
 In fact, `break` statements don't have any special meaning inside `switch`.
 
-You can also match multiple different values in the same `case`.
+You can match multiple different values in the same `case`.
 The `case` will run if any of those values matches:
 
     case "mouse", "rat", "squirrel":
@@ -1639,8 +1620,8 @@ and whenever you read from a `Sum` (with a *receive* expression),
 it outputs the value of the variable.
 But perhaps we want to add more abilities to our `Sum`:
 for example, maybe we want to be able to reset the variable,
-or to multiply the its value by a certain amount, or something like that.
-Let's implement both of those features:
+or to multiply its value by a certain amount, or something similar.
+Let's implement both of these features:
 
     Sum -> {
         // `sum` is initially zero.
@@ -1653,19 +1634,19 @@ Let's implement both of those features:
                 out sum
                 continue
             }
-            // If the input is a number, add it to the sum as usual.
+            // If input is a number, add it to the sum as usual.
             if [IsNumber cmd] {
                 sum += cmd
                 continue
             }
-            // If the input is a symbol:
+            // If input is a symbol:
             switch cmd {
             
-            // If the input is `.Reset`, reset the sum.
+            // If input is `.Reset`, reset the sum.
             case .Reset:
                 sum = 0
             
-            // If the input is `.Multiply`,
+            // If input is `.Multiply`,
             // multiply the sum by a given number.
             case .Multiply:
                 sum *= in
@@ -1698,8 +1679,8 @@ For example:
 This is what object-oriented programming is all about.
 We define a process that accepts symbols as input,
 and has a special behavior for each symbol.
-The symbols the process accepts are called its *methods* &ndash;
-so our `Sum` has the methods `.Reset` and `.Multiply`.
+The symbols which the process accepts are called its *methods* &ndash;
+so our `Sum` has methods `.Reset` and `.Multiply`.
 A process that has methods is called an *object*.
 
 In a later section, we will expand on this subject,
@@ -1723,7 +1704,7 @@ Here, when `Process1` reaches the `inout` statement, it will start mimicking
 Then, whenever `Process2` outputs something, `Process1` will output the
 same thing.
 whenever `Process2` starts waiting for input, `Process1` will also start
-waiting for input, and then pass the input to `Process2`.
+waiting for input, then pass the input to `Process2`.
 Once `Process2` stops, `Process1` will stop mimicking it,
 and go back to whatever it was doing.
 
@@ -1783,8 +1764,6 @@ to communicate with the user.
 To make this work, we had to use `inout` in our `Main` process,
 to pass the games' output to the user, and to pass the user's input
 to the games.
-Otherwise, the games would just freeze once they execute an `in` or `out`
-command, because no one would send them input or read their output.
 
 Forking
 -------
@@ -1796,7 +1775,7 @@ object-oriented code.
 In order to `fork` (that is, *split*) itself,
 a process has to use a `fork in` expression,
 When a `fork in` expression runs, the current process pauses and starts
-waiting for input &ndash; just like an `in` expression.
+waiting for input &ndash; just like with an `in` expression.
 However, once the process gets an input, it does't resume running.
 Instead, it creates a *child process* of itself, and sends the input to
 the child.
@@ -1812,7 +1791,7 @@ it just pauses itself again and waits for more input.
 If it then gets a new input, it creates a new child process, and so on.
 
 This whole procedure allows us to create multiple copies of the same process,
-that differ only in the result of the `fork in` expression in each of them:
+that differ only in the result of the `fork in` expression in each one of them:
 
     TellUser -> {
         s := fork in
@@ -1826,7 +1805,7 @@ that differ only in the result of the `fork in` expression in each of them:
     }
 
 This program outputs the word "Hello" and then "Goodbye".
-We'll take a look at how this works, step by step:
+Let's take a look at how this works, step by step:
 
 1. `Main` creates a `TellUser` process.
 2. The `TellUser` process starts running.
@@ -1895,8 +1874,8 @@ On the other hand, when a child process creates a variable
 after the `fork in`, it creates it only for itself.
 Another child process cannot access that variable
 (though it may create another variable with the same name).
-This includes all the variables that are created on the same line as
-the `fork in`, or the following lines.
+These "private" variables includes all the variables that are 
+created on the same line as the `fork in`, or the following lines.
 For example:
 
     Foo -> {
@@ -1929,8 +1908,8 @@ Every process contains a special variable called `this`.
         Assert ([myProc] == myProc)
     }
 
-In a child process, `this` always refers to its parent process,
-and not to itself.
+In a child process, `this` always refers to the parent process,
+not to the child.
 To access the current child of the process,
 use the special value `fork this` instead:
 
@@ -1950,7 +1929,7 @@ Reentrant Objects
 
 Let's go back to object-oriented programming.
 
-When defining objects in Malakh, it is often convenient to define
+When defining an object in Malakh, it is often convenient to define
 one of its methods in terms of another method.
 For example, consider this process (similar to one we've already seen):
 
@@ -2001,7 +1980,7 @@ so it forks itself after reading input:
     }
 
 Now, the line `this .Add (-in)` works as expected,
-because whenever it runs, the process that runs it is a child process.
+because whenever it runs, the process that executes it is a child process.
 The statement `this .Add (-in)` creates another child process
 and sends the inputs: `.Add (-in)` to it.
 So no process actually sends input to itself.
@@ -2034,13 +2013,13 @@ Lists
 
 `List` is another data structure process, similar to `Stack` and
 `Queue`, but much more advanced.
-It is also an object, implemented using `fork in`.
+It is also an object, implemented with forking.
 
 To create a list, use the constructor `List`.
 Like a stack or a queue, a list contains a sequence of values.
 The list starts empty, and you can use the `.Push` method to add items to it.
 
-You can use the `.Length` method to get the length of the list:
+You can use the `.Length` method to get the list's length:
 
     Main -> {
         myList := List // create an empty list
@@ -2053,7 +2032,7 @@ You can use the `.Length` method to get the length of the list:
 
 Each item in the list has an index, from `0` to `n-1`
 (where `n` is the length of the list).
-You can read any item from the list using its index:
+You can read any item from the list by its index:
 
     Main -> {
         list := List
@@ -2156,8 +2135,8 @@ The output of `Process::State` will be one of the following:
     It will resume running once it gets some input.
 - `.OptIn`: the process is executing an optional `in` expression,
     and is waiting for input.
-    It will resume running once it gets some input,
-    but it can also resume without input.
+    It will resume running once it gets some input &ndash;
+    but it can also resume without input, if requested.
 - `.ForkIn`: the process is executing a `fork in` expression,
     and is waiting for input.
     When it gets input, it will create a child process,
@@ -2168,8 +2147,8 @@ For example:
     Main -> {
         Assert ([Process::State this] == .Run)
         Assert ([Process::State {}] == .Stop)
-        Assert ([Process::State (Sin 1.0)] == .Out)
-        Assert ([Process::State Sin] == .In)
+        Assert ([Process::State (Math::Sin 1.0)] == .Out)
+        Assert ([Process::State Math::Sin] == .In)
         Assert ([Process::State Sum] == .OptIn)
         Assert ([Process::State List] == .ForkIn)
     }
@@ -2177,7 +2156,7 @@ For example:
 Control Flow
 ------------
 
-In this section, we will define the semantics of processes more precisely,
+In this section, we will define the formal semantics of processes,
 and in particular, what causes a process to run, stop, pause, and so on.
 Usually you don't need to think about these rules, as the behavior of
 processes tends to be very intuitive, but there are some edge-cases where this
@@ -2191,7 +2170,7 @@ the *process stack*, which holds all the processes that are in the
 At any given moment, the only process that is actively running is the one on
 top of the process stack.
 (There may be multiple processes in the `.Run` state at the same time,
-but the interpreter is only able to run one of them at a given moment,
+but the interpreter is only able to run one of them at any given moment,
 and it always chooses to run the one at the top of the stack.)
 
 Whenever you create a process, it always starts in the `.Run` state,
@@ -2202,7 +2181,7 @@ When the program starts running, the first process that gets created is
 
 The stack may only contain processes that are in the `.Run` state.
 If the state of the top process of the stack changes from `.Run` to something
-else, it is immediately removed from the stack.
+else, it immediately gets removed from the stack.
 (Processes on the stack, other than the one on top, will never change their
 state.)
 
@@ -2220,12 +2199,12 @@ The following rules describe the transitions between states:
     its state will change to `.Stop`.
   
   After the process changes its state, it gets removed from the stack,
-  which means the process below it on the stack starts running.
+  which means that the process below it on the stack starts running.
 - A process in the `.Stop` state will remain in that state forever.
 - A process in the `.Out` state has a value which it is trying to output.
   It has an *output slot*, which holds that value.
   When another process receives that output (using a *receive* expression),
-  it reads the value of the output slot, and then empties it.
+  it reads the value of the output slot, then empties it.
   By doing so, it notifies the process with the output slot that its output
   has been received, and that process changes its state from `.Out` to `.Run`,
   and gets pushed to the top of the stack.
@@ -2260,13 +2239,15 @@ If `p2` is in the `OptIn` state, then `p1` tries to make it switch its state
 to `.Out`. To do so, it sends `p2` the "no input" signal (as described above).
 This causes `p2` to change its state to `.Run` and run for a while.
 Once `p2` gets removed from the stack, `p1` resumes running.
-`p1` checks if the state of `p2` is `.Out`. If not, `p1` crashes.
-If the state of `p2` is `.Out`, `p1` reads its output as usual.
+`p1` checks if the state of `p2` is now `.Out`. If not, `p1` crashes.
+If the state of `p2` is `.Out`, `p1` reads its output as usual.\
+In particular, if the state of `p2` was `.OptIn`, and remains `.OptIn` after
+one "no input" signal, `p1` won't try to send it another "no input" signal.
 
-**Optional Receive Expressions:** an optional receive expression acts just like
-a regular receive expression, except that if the process that executes it would
-crash because the other process is in the wrong state, it doesn't crash,
-but runs some alternative code, as defined in the program.
+**Optional Receive Expressions:** an optional receive expression `[p2]`
+acts just like a regular receive expression, except that whenever the process
+that executes it would crash because `p2` is in the wrong state,
+it doesn't crash, but runs some alternative code, as defined in the program.
 
 Error Handling
 --------------
@@ -2333,7 +2314,6 @@ without explicitly assigning it a value:
         else {
             n = 0
         }
-        // Output `n`.
         out n
     }
 
@@ -2432,12 +2412,12 @@ The `...` operator can do the same thing:
 
 Behind the scenes, `...` works exactly like the `while` loop above,
 but it is shorter to write.
-If you wanted, you could shorten the above process even further:
+If you wanted, you could shorten this process even further:
 
     // Converts a queue to a stack.
     QueueToStack -> {
         queue := in
-        // `...` can appear in a send expression, with the usual rules.
+        // `...` can appear in a send expression, under the usual rules.
         out (Stack [queue]...)
     }
 
@@ -2473,7 +2453,7 @@ This is not very useful, but it works.
 an `out` statement.
 It follows either a *receive* expression or an `in` expression.
 In all cases, the `...` operator repeatedly reads values, as many as
-possible, and sends or outputs each value.
+possible, and sends or outputs each one.
 
 Bare Block
 ----------
@@ -2660,9 +2640,9 @@ For example:
 The `[{}]` Trick
 ----------------
 
-This is a trick that's useful when defining global variables.
-When you define a global variable, you must assign it a value immediately.
-You cannot use multiple lines to initialize a global variable.
+There's is a trick that's useful when defining global variables.
+When you define a global variable, you must assign it a value immediately
+&ndash; you cannot use multiple lines to initialize a global variable.
 For example, suppose that you want to create a global list with 100 zeroes.
 You cannot do this:
 
