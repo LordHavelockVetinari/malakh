@@ -948,7 +948,7 @@ such as:
 
     Main -> {
         out [Math::Sin 3.14]  // Output: 0.00159265291648683
-        out [Math::Sum 1 2 3] // Output: 6
+        out [Sum 1 2 3] // Output: 6
     }
 
 Now you can finally understand how these work!
