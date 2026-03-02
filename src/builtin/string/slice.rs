@@ -116,6 +116,6 @@ impl helper::Function for Slice {
         let slice = s
             .slice(start, end - start, vm.gc_mut())
             .expect("slicing shouldn't fail");
-        Action::Output(Value::from_string_ref(slice))
+        Action::Output(Value::from(slice))
     }
 }

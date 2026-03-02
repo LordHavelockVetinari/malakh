@@ -134,7 +134,7 @@ impl UserProcessRef {
                 .unwrap()
                 .fill(MaybeUninit::new(Value::ZERO));
         }
-        gc.start_tracking(Value::from_user_process_ref(this), layout.size());
+        gc.start_tracking(Value::from(this), layout.size());
         this
     }
 
@@ -156,11 +156,5 @@ impl UserProcessRef {
             alloc::dealloc(self.0.as_ptr().cast::<u8>(), self.family().layout());
         }
         false
-    }
-}
-
-impl From<UserProcessRef> for Value {
-    fn from(process: UserProcessRef) -> Self {
-        Value::from_user_process_ref(process)
     }
 }

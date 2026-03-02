@@ -140,20 +140,11 @@ impl Value {
         }))
     }
 
-    pub fn from_big_int_ref(int_ref: BigIntRef) -> Self {
-        Self(
-            int_ref
-                .0
-                .map_addr(|addr| (addr | Self::BIG_INT_TAG))
-                .cast::<u8>(),
-        )
-    }
-
     pub fn from_isize(n: isize, gc: &mut GarbageCollector) -> Self {
         if let Some(result) = Self::from_small_int(n) {
             result
         } else {
-            Self::from_big_int_ref(BigIntRef::new_unchecked(Integer::from(n), gc))
+            Self::from(BigIntRef::new_unchecked(Integer::from(n), gc))
         }
     }
 
@@ -173,16 +164,12 @@ impl Value {
         {
             result
         } else {
-            Self::from_big_int_ref(BigIntRef::new_unchecked(n, gc))
+            Self::from(BigIntRef::new_unchecked(n, gc))
         }
     }
 
-    pub fn from_float_ref(f: FloatRef) -> Self {
-        Self(f.0.map_addr(|addr| addr | Self::FLOAT_TAG).cast::<u8>())
-    }
-
     pub fn from_f64(value: f64, gc: &mut GarbageCollector) -> Self {
-        Self::from_float_ref(FloatRef::new(value, gc))
+        Self::from(FloatRef::new(value, gc))
     }
 
     pub fn as_small_int(self) -> Option<isize> {
@@ -279,49 +266,8 @@ impl Value {
         ))
     }
 
-    pub fn from_user_process_ref(proc: UserProcessRef) -> Self {
-        Self(
-            proc.0
-                .map_addr(|addr| (addr | Self::USER_PROCESS_TAG))
-                .cast::<u8>(),
-        )
-    }
-
-    pub fn from_builtin_process_ref(proc: BuiltinProcessRef) -> Self {
-        Self(
-            proc.0
-                .map_addr(|addr| (addr | Self::BUILTIN_PROCESS_TAG))
-                .cast::<u8>(),
-        )
-    }
-
-    pub fn from_symbol(sym: &'static Symbol) -> Self {
-        Self(
-            NonNull::from(sym)
-                .map_addr(|addr| (addr | Self::SYMBOL_TAG))
-                .cast::<u8>(),
-        )
-    }
-
-    pub fn from_bool(b: bool) -> Self {
-        if b { Self::TRUE } else { Self::FALSE }
-    }
-
-    pub fn from_string_ref(s: StringRef) -> Self {
-        Self(s.0.map_addr(|addr| (addr | Self::STRING_TAG)).cast::<u8>())
-    }
-
     pub fn string_from_bytes(bytes: &[u8], gc: &mut GarbageCollector) -> Self {
-        Self::from_string_ref(StringRef::new(bytes, gc))
-    }
-
-    pub fn from_capture_ref(capture: CaptureRef) -> Self {
-        Self(
-            capture
-                .0
-                .map_addr(|addr| (addr | Self::CAPTURE_TAG))
-                .cast::<u8>(),
-        )
+        Self::from(StringRef::new(bytes, gc))
     }
 
     pub fn as_user_process_ref(self) -> Option<UserProcessRef> {
@@ -693,6 +639,82 @@ impl PartialEq for Value {
             (Self::STRING_TAG, _) | (_, Self::STRING_TAG) => false,
             (Self::FLOAT_TAG, Self::FLOAT_TAG) | (8.., _) | (_, 8..) => unreachable!(),
         }
+    }
+}
+
+impl From<BuiltinProcessRef> for Value {
+    fn from(proc: BuiltinProcessRef) -> Self {
+        Self(
+            proc.0
+                .map_addr(|addr| (addr | Self::BUILTIN_PROCESS_TAG))
+                .cast::<u8>(),
+        )
+    }
+}
+
+impl From<UserProcessRef> for Value {
+    fn from(proc: UserProcessRef) -> Self {
+        Self(
+            proc.0
+                .map_addr(|addr| (addr | Self::USER_PROCESS_TAG))
+                .cast::<u8>(),
+        )
+    }
+}
+
+impl From<AnyProcessRef> for Value {
+    fn from(proc: AnyProcessRef) -> Self {
+        proc.0
+    }
+}
+
+impl From<BigIntRef> for Value {
+    fn from(int_ref: BigIntRef) -> Self {
+        Self(
+            int_ref
+                .0
+                .map_addr(|addr| (addr | Self::BIG_INT_TAG))
+                .cast::<u8>(),
+        )
+    }
+}
+
+impl From<FloatRef> for Value {
+    fn from(f: FloatRef) -> Self {
+        Self(f.0.map_addr(|addr| addr | Self::FLOAT_TAG).cast::<u8>())
+    }
+}
+
+impl From<&'static Symbol> for Value {
+    fn from(sym: &'static Symbol) -> Self {
+        Self(
+            NonNull::from(sym)
+                .map_addr(|addr| (addr | Self::SYMBOL_TAG))
+                .cast::<u8>(),
+        )
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        if b { Self::TRUE } else { Self::FALSE }
+    }
+}
+
+impl From<StringRef> for Value {
+    fn from(s: StringRef) -> Self {
+        Self(s.0.map_addr(|addr| (addr | Self::STRING_TAG)).cast::<u8>())
+    }
+}
+
+impl From<CaptureRef> for Value {
+    fn from(capture: CaptureRef) -> Self {
+        Self(
+            capture
+                .0
+                .map_addr(|addr| (addr | Self::CAPTURE_TAG))
+                .cast::<u8>(),
+        )
     }
 }
 

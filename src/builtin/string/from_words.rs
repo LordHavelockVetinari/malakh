@@ -26,7 +26,7 @@ impl helper::BasicAggregator for FromWords {
     }
 
     fn get(&mut self, vm: &mut Vm) -> Option<Value> {
-        Some(Value::from_string_ref(self.buffer.to_string(vm.gc_mut())))
+        Some(Value::from(self.buffer.to_string(vm.gc_mut())))
     }
 
     fn put(&mut self, value: Value, vm: &mut Vm) {

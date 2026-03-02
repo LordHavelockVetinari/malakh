@@ -16,7 +16,7 @@ impl Method for Copy {
         let mut result = BuiltinProcessRef::new(family, None, vm);
         let result_data = unsafe { result.data_mut::<super::List>() };
         result_data.data = parent.data.clone();
-        let result = Value::from_builtin_process_ref(result);
+        let result = Value::from(result);
         (Self, Action::Output(result))
     }
 

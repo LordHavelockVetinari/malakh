@@ -253,7 +253,7 @@ fn run_equals(vm: &mut Vm, inst: Instruction) {
     let (dst, src1, src2) = inst.as_three_operand();
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
-    let result = Value::from_bool(src1 == src2);
+    let result = Value::from(src1 == src2);
     *vm.register_mut(dst) = result;
 }
 
@@ -262,7 +262,7 @@ fn run_not_equals(vm: &mut Vm, inst: Instruction) {
     let (dst, src1, src2) = inst.as_three_operand();
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
-    let result = Value::from_bool(src1 != src2);
+    let result = Value::from(src1 != src2);
     *vm.register_mut(dst) = result;
 }
 
@@ -280,7 +280,7 @@ fn run_less(vm: &mut Vm, inst: Instruction) {
         );
         return;
     };
-    *vm.register_mut(dst) = Value::from_bool(ord == Some(Ordering::Less));
+    *vm.register_mut(dst) = Value::from(ord == Some(Ordering::Less));
 }
 
 fn run_less_or_equal(vm: &mut Vm, inst: Instruction) {
@@ -297,7 +297,7 @@ fn run_less_or_equal(vm: &mut Vm, inst: Instruction) {
         );
         return;
     };
-    *vm.register_mut(dst) = Value::from_bool(ord.is_some_and(Ordering::is_le));
+    *vm.register_mut(dst) = Value::from(ord.is_some_and(Ordering::is_le));
 }
 
 fn run_not(vm: &mut Vm, inst: Instruction) {
@@ -312,7 +312,7 @@ fn run_not(vm: &mut Vm, inst: Instruction) {
         }
         return;
     };
-    let result = Value::from_bool(!src);
+    let result = Value::from(!src);
     *vm.register_mut(dst) = result;
 }
 
@@ -335,7 +335,7 @@ fn run_xor(vm: &mut Vm, inst: Instruction) {
         }
         return;
     };
-    let result = Value::from_bool(src1 ^ src2);
+    let result = Value::from(src1 ^ src2);
     *vm.register_mut(dst) = result;
 }
 
@@ -420,7 +420,7 @@ fn run_capture(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), CAPTURE);
     let (dst, src, _) = inst.as_three_operand();
     let src = vm.register(src);
-    let result = Value::from_capture_ref(CaptureRef::new(src, vm.gc_mut()));
+    let result = Value::from(CaptureRef::new(src, vm.gc_mut()));
     *vm.register_mut(dst) = result;
 }
 
@@ -448,7 +448,7 @@ fn run_new(vm: &mut Vm, inst: Instruction) {
     let (dst, src) = inst.as_two_operand();
     let family = vm.user_process_families[src as usize];
     let proc = UserProcessRef::new(family, &mut vm.gc);
-    *vm.register_mut(dst) = Value::from_user_process_ref(proc);
+    *vm.register_mut(dst) = Value::from(proc);
     vm.enter_user_process(proc);
 }
 
@@ -457,7 +457,7 @@ fn run_new_builtin(vm: &mut Vm, inst: Instruction) {
     let (dst, src) = inst.as_two_operand();
     let family = vm.get_builtin_family(src);
     let proc = BuiltinProcessRef::new(family, None, vm);
-    *vm.register_mut(dst) = Value::from_builtin_process_ref(proc);
+    *vm.register_mut(dst) = Value::from(proc);
 }
 
 fn run_stop(vm: &mut Vm, inst: Instruction) {
@@ -594,7 +594,7 @@ fn run_send(vm: &mut Vm, inst: Instruction) {
     match (proc.state(), proc.builtin_or_user_defined()) {
         (ProcessState::In | ProcessState::OptIn | ProcessState::ForkIn, Left(proc)) => {
             let result = vm.enter_builtin_process(proc, Some(src2));
-            *vm.register_mut(dst) = Value::from_builtin_process_ref(result);
+            *vm.register_mut(dst) = Value::from(result);
         }
         (ProcessState::In, Right(mut proc)) => {
             *vm.register_mut(dst) = src1;
@@ -658,7 +658,7 @@ fn run_state(vm: &mut Vm, inst: Instruction) {
         throw_from_current_process!(vm, "type error: [State {}]", src.type_name());
         return;
     };
-    *vm.register_mut(dst) = proc.state().as_value();
+    *vm.register_mut(dst) = Value::from(proc.state());
 }
 
 fn run_new_error(vm: &mut Vm, inst: Instruction) {

@@ -14,6 +14,6 @@ impl Function for IsNumber {
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
     fn input(&mut self, input: Value, _vm: &mut Vm) -> helper::Action {
-        Action::Output(Value::from_bool(input.is_number()))
+        Action::Output(Value::from(input.is_number()))
     }
 }

@@ -102,7 +102,7 @@ impl BuiltinProcessRef {
             (family.init)(this, parent, vm);
         }
         vm.gc
-            .start_tracking(Value::from_builtin_process_ref(this), family.layout.size());
+            .start_tracking(Value::from(this), family.layout.size());
         this
     }
 
@@ -171,11 +171,5 @@ impl BuiltinProcessRef {
             alloc::dealloc(self.0.as_ptr().cast::<u8>(), family.layout);
         }
         false
-    }
-}
-
-impl From<BuiltinProcessRef> for Value {
-    fn from(process: BuiltinProcessRef) -> Self {
-        Value::from_builtin_process_ref(process)
     }
 }

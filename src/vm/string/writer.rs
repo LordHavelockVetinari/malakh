@@ -53,7 +53,7 @@ impl StringBuffer {
     }
 
     pub fn gc_mark_content(&self, gc: &mut GarbageCollector) {
-        gc.mark(Value::from_string_ref(self.storage_string()));
+        gc.mark(Value::from(self.storage_string()));
     }
 
     pub fn writer<'a>(&'a mut self, gc: &'a mut GarbageCollector) -> StringWriter<'a> {

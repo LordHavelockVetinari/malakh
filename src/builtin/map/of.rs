@@ -39,7 +39,7 @@ impl helper::Function for Of {
     }
 
     fn gc_mark_content(&self, gc: &mut GarbageCollector) {
-        gc.mark(Value::from_builtin_process_ref(self.result));
+        gc.mark(Value::from(self.result));
         match self.mode {
             Mode::ExpectKey => {}
             Mode::ExpectIs(key) | Mode::ExpectValue(key) => gc.mark(key.get()),
@@ -74,6 +74,6 @@ impl helper::Function for Of {
     }
 
     fn no_input(&mut self, _vm: &mut Vm) -> Action {
-        Action::Output(Value::from_builtin_process_ref(self.result))
+        Action::Output(Value::from(self.result))
     }
 }

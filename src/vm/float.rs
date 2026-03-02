@@ -9,7 +9,7 @@ pub struct FloatData {
     value: f64,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct FloatRef(pub NonNull<FloatData>);
 
 impl FloatRef {
@@ -21,7 +21,7 @@ impl FloatRef {
             })))
             .unwrap(),
         );
-        gc.start_tracking(Value::from_float_ref(this.clone()), size_of::<FloatData>());
+        gc.start_tracking(Value::from(this), size_of::<FloatData>());
         this
     }
 

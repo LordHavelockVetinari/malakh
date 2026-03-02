@@ -15,6 +15,6 @@ impl Function for IsFinite {
 
     fn input(&mut self, input: Value, _vm: &mut Vm) -> helper::Action {
         let result = input.as_f64().is_some_and(f64::is_finite) || input.is_int();
-        Action::Output(Value::from_bool(result))
+        Action::Output(Value::from(result))
     }
 }

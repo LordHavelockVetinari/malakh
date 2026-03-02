@@ -50,12 +50,12 @@ impl VmBuilder {
     }
 
     pub fn string_symbol(&mut self, s: &[u8]) -> Option<u32> {
-        let value = Value::from_string_ref(StringRef::new(s, &mut self.0.gc));
+        let value = Value::from(StringRef::new(s, &mut self.0.gc));
         self.constant(value)
     }
 
     pub fn symbol_constant(&mut self, name: &str) -> Option<u32> {
-        self.constant(Value::from_symbol(Symbol::get_global(name)))
+        self.constant(Value::from(Symbol::get_global(name)))
     }
 
     pub fn process_family(&mut self, family: UserProcessFamily) -> Option<u32> {

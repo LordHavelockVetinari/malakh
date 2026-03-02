@@ -37,6 +37,6 @@ impl helper::Function for Of {
         let list = unsafe { list_ref.data_mut::<super::List>() };
         debug_assert!(list.data.is_empty());
         list.data = mem::take(&mut self.data);
-        Action::Output(Value::from_builtin_process_ref(list_ref))
+        Action::Output(Value::from(list_ref))
     }
 }

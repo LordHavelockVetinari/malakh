@@ -17,6 +17,6 @@ impl BasicFunction for State {
         let Some(p) = input.as_any_process_ref() else {
             todo!("Process::State did not get a process");
         };
-        BasicFunctionResult::Output(p.state().as_value())
+        BasicFunctionResult::Output(Value::from(p.state()))
     }
 }

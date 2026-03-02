@@ -9,7 +9,7 @@ pub struct CaptureData {
     value: Value,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct CaptureRef(pub NonNull<CaptureData>);
 
 impl CaptureRef {
@@ -21,10 +21,7 @@ impl CaptureRef {
             })))
             .unwrap(),
         );
-        gc.start_tracking(
-            Value::from_capture_ref(this.clone()),
-            size_of::<CaptureData>(),
-        );
+        gc.start_tracking(Value::from(this), size_of::<CaptureData>());
         this
     }
 

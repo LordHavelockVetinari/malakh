@@ -106,7 +106,7 @@ impl Vm {
             }
         }
         for &p in &self.call_stack {
-            self.gc.mark(Value::from_user_process_ref(p));
+            self.gc.mark(Value::from(p));
         }
     }
 

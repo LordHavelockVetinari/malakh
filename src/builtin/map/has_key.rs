@@ -24,6 +24,6 @@ impl Method for HasKey {
             return Action::Output(Value::FALSE);
         };
         let result = parent.find_entry(key).is_ok();
-        Action::Output(Value::from_bool(result))
+        Action::Output(Value::from(result))
     }
 }

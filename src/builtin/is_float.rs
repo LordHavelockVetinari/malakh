@@ -14,6 +14,6 @@ impl Function for IsFloat {
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
     fn input(&mut self, input: Value, _vm: &mut Vm) -> helper::Action {
-        Action::Output(Value::from_bool(input.is_float()))
+        Action::Output(Value::from(input.is_float()))
     }
 }

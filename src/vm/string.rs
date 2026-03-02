@@ -29,7 +29,7 @@ pub struct OwnedStringHeader {
     len: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct StringRef(pub NonNull<StringHeader>);
 
 impl OwnedStringHeader {
@@ -67,7 +67,7 @@ impl StringRef {
                 len,
             });
         }
-        gc.start_tracking(Value::from_string_ref(this.clone()), layout.size());
+        gc.start_tracking(Value::from(this), layout.size());
         this
     }
 
@@ -113,7 +113,7 @@ impl StringRef {
                 bytes,
             });
         }
-        gc.start_tracking(Value::from_string_ref(this.clone()), layout.size());
+        gc.start_tracking(Value::from(this), layout.size());
         this
     }
 
@@ -162,11 +162,11 @@ impl StringRef {
         false
     }
 
-    fn owner(&self) -> StringRef {
+    fn owner(&self) -> Self {
         if self.header().is_borrowed {
-            unsafe { self.0.cast::<BorrowedStringHeader>().as_ref().owner.clone() }
+            unsafe { self.0.cast::<BorrowedStringHeader>().as_ref().owner }
         } else {
-            self.clone()
+            *self
         }
     }
 

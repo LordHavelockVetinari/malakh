@@ -11,7 +11,7 @@ pub struct BigIntInner {
     value: Integer,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct BigIntRef(pub NonNull<BigIntInner>);
 
 impl BigIntRef {
@@ -25,7 +25,7 @@ impl BigIntRef {
             value,
         }));
         let this = BigIntRef(NonNull::new(ptr).unwrap());
-        gc.start_tracking(Value::from_big_int_ref(this.clone()), approx_size);
+        gc.start_tracking(Value::from(this), approx_size);
         this
     }
 

@@ -44,8 +44,8 @@ impl BasicFunction for Lines {
     }
 
     fn gc_mark_content(&self, gc: &mut GarbageCollector) {
-        if let Some(owner) = self.owner.clone() {
-            gc.mark(Value::from_string_ref(owner));
+        if let Some(owner) = self.owner {
+            gc.mark(Value::from(owner));
         }
     }
 
@@ -53,23 +53,23 @@ impl BasicFunction for Lines {
         let Some(owner) = input.as_string_ref() else {
             todo!("String::Words did not get a string");
         };
-        self.owner = Some(owner.clone());
+        self.owner = Some(owner);
         self.data = NonNull::from(owner.bytes());
         match self.next() {
             Some(result) => {
                 let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
-                BasicFunctionResult::Output(Value::from_string_ref(result))
+                BasicFunctionResult::Output(Value::from(result))
             }
             None => BasicFunctionResult::Stop,
         }
     }
 
     fn after_output(&mut self, vm: &mut Vm) -> BasicFunctionResult {
-        let owner = self.owner.clone().unwrap();
+        let owner = self.owner.unwrap();
         match self.next() {
             Some(result) => {
                 let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
-                BasicFunctionResult::Output(Value::from_string_ref(result))
+                BasicFunctionResult::Output(Value::from(result))
             }
             None => BasicFunctionResult::Stop,
         }

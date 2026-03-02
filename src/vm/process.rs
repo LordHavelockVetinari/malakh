@@ -19,23 +19,29 @@ pub enum ProcessState {
     Err,
 }
 
-impl ProcessState {
-    pub fn as_value(self) -> Value {
+#[derive(Clone, Copy, Debug)]
+pub struct AnyProcessRef(pub Value);
+
+impl From<ProcessState> for &'static Symbol {
+    fn from(state: ProcessState) -> Self {
         use ProcessState::*;
-        match self {
-            Run => Value::from_symbol(Symbol::RUN),
-            Stop => Value::from_symbol(Symbol::STOP),
-            In => Value::from_symbol(Symbol::IN),
-            OptIn => Value::from_symbol(Symbol::OPT_IN),
-            ForkIn => Value::from_symbol(Symbol::FORK_IN),
-            Out => Value::from_symbol(Symbol::OUT),
-            Err => Value::from_symbol(Symbol::ERR),
+        match state {
+            Run => Symbol::RUN,
+            Stop => Symbol::STOP,
+            In => Symbol::IN,
+            OptIn => Symbol::OPT_IN,
+            ForkIn => Symbol::FORK_IN,
+            Out => Symbol::OUT,
+            Err => Symbol::ERR,
         }
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct AnyProcessRef(Value);
+impl From<ProcessState> for Value {
+    fn from(state: ProcessState) -> Self {
+        Value::from(<&'static Symbol>::from(state))
+    }
+}
 
 impl AnyProcessRef {
     pub fn from_value(value: Value) -> Option<Self> {
@@ -78,12 +84,12 @@ impl AnyProcessRef {
 
 impl From<BuiltinProcessRef> for AnyProcessRef {
     fn from(builtin_process: BuiltinProcessRef) -> Self {
-        Self(Value::from_builtin_process_ref(builtin_process))
+        Self(Value::from(builtin_process))
     }
 }
 
 impl From<UserProcessRef> for AnyProcessRef {
     fn from(user_process: UserProcessRef) -> Self {
-        Self(Value::from_user_process_ref(user_process))
+        Self(Value::from(user_process))
     }
 }

@@ -302,7 +302,7 @@ impl<T: Method> BuiltinProcessData for AsMethod<T> {
 
     unsafe fn gc_mark_content(process: BuiltinProcessRef, gc: &mut GarbageCollector) {
         let &Self { parent, ref data } = unsafe { process.data::<Self>() };
-        gc.mark(Value::from_builtin_process_ref(parent));
+        gc.mark(Value::from(parent));
         <T as Method>::gc_mark_content(data, gc);
     }
 
