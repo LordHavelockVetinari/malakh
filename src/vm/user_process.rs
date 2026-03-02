@@ -1,5 +1,5 @@
 use std::alloc::{self, Layout};
-use std::mem::MaybeUninit;
+use std::mem::{self, MaybeUninit};
 use std::ptr::NonNull;
 
 use crate::vm::gc::GarbageCollector;
@@ -21,6 +21,7 @@ pub struct UserProcessFamily {
 pub struct UserProcessHeader {
     gc_info: GcInfo,
     state: ProcessState,
+    can_resume: bool,
     family: &'static UserProcessFamily,
     instruction_pointer: *const Instruction,
 }
@@ -105,6 +106,14 @@ impl UserProcessRef {
         &mut self.header_mut().state
     }
 
+    pub fn set_can_resume(&mut self) {
+        self.header_mut().can_resume = true;
+    }
+
+    pub fn take_can_resume(&mut self) -> bool {
+        mem::replace(&mut self.header_mut().can_resume, false)
+    }
+
     pub fn new(family: &'static UserProcessFamily, gc: &mut GarbageCollector) -> Self {
         let layout = family.layout();
         let mut this = Self(
@@ -118,6 +127,7 @@ impl UserProcessRef {
                 family,
                 instruction_pointer: &family.code[0],
                 state: ProcessState::Run,
+                can_resume: false,
             });
             this.memory_uninit()
                 .as_mut()
@@ -146,5 +156,11 @@ impl UserProcessRef {
             alloc::dealloc(self.0.as_ptr().cast::<u8>(), self.family().layout());
         }
         false
+    }
+}
+
+impl From<UserProcessRef> for Value {
+    fn from(process: UserProcessRef) -> Self {
+        Value::from_user_process_ref(process)
     }
 }

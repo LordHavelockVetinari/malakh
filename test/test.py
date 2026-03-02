@@ -33,7 +33,7 @@ def do_job(name):
     output = read(name + ".out")
     error = read(name + ".err")
     completed = subprocess.run(
-        [EXECUTABLE, malfile],
+        [EXECUTABLE, malfile, "--raw-errors"],
         input=input,
         stdout=PIPE,
         stderr=PIPE,

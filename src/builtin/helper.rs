@@ -394,7 +394,7 @@ macro_rules! define_class {
 
         pub static FAMILY_INDEX: ::std::sync::OnceLock<u32> = ::std::sync::OnceLock::new();
 
-        pub fn init(collector: &mut $crate::builtin::BuiltinCollector, family_index: u32) {
+        pub(in $crate::builtin) fn init(#[allow(unused)] collector: &mut $crate::builtin::BuiltinCollector, family_index: u32) {
             FAMILY_INDEX.set(family_index).expect("family initialized twice");
             $({
                 let index = collector.add_family(
@@ -405,6 +405,7 @@ macro_rules! define_class {
             })*
         }
 
+        #[allow(unused)]
         fn symbol_to_method_index(symbol: &'static $crate::vm::symbol::Symbol) -> Option<u32> {
             $(
                 $crate::builtin::helper::_define_class_symbol!(symbol, $name, $T, $($meta)?);

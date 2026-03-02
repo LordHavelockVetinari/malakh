@@ -9,8 +9,8 @@ use crate::parse::token::TokenType::*;
 use crate::parse::token::{Token, TokenType};
 use crate::parse::tree::{
     Argument, ArgumentType, Assignment, AssignmentTarget, AssignmentType, BinaryOperator, Block,
-    CodeFile, Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, ImportDeclaration,
-    JumpType, Stmt, StmtType, SwitchCase, UnaryOperator,
+    CatchClause, CodeFile, Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration,
+    ImportDeclaration, JumpType, RaiseType, Stmt, StmtType, SwitchCase, UnaryOperator,
 };
 
 mod error;
@@ -702,6 +702,21 @@ impl Parser {
                 );
             }
             Ok(Rc::new(Stmt(StmtType::Out(args), out_token.1)))
+        } else if let Some(raise_token) =
+            self.consume_if(|t| matches!(t, KeywordErr | KeywordThrow))?
+        {
+            let kind = match raise_token.0 {
+                TokenType::KeywordErr => RaiseType::Err,
+                TokenType::KeywordThrow => RaiseType::Throw,
+                _ => unreachable!(),
+            };
+            let args = self.parse_args()?;
+            if matches!(self.token_at(0)?.0, Comma) {
+                return self.err_here(
+                    "unnecessary comma in error (error values are separated with spaces)",
+                );
+            }
+            Ok(Rc::new(Stmt(StmtType::Raise(kind, args), raise_token.1)))
         } else if let Some(break_token) = self.consume_if(|typ| matches!(typ, KeywordBreak))? {
             Ok(Rc::new(Stmt(
                 StmtType::Jump(JumpType::Break),
@@ -761,6 +776,30 @@ impl Parser {
                 StmtType::Loop(Some(cond), stmts),
                 while_token.1,
             )))
+        } else if let Some(try_token) = self.consume_if(|typ| matches!(typ, KeywordTry))? {
+            self.ignore_semicolons()?;
+            let code = self.parse_block()?.stmts;
+            let mut catches = Vec::new();
+            loop {
+                self.ignore_semicolons()?;
+                let Some(catch_token) = self.consume_if(|t| matches!(t, KeywordCatch))? else {
+                    break;
+                };
+                let values = self.parse_comma_separated_exprs(ExprTypeRestrictions::Any)?;
+                let values = if values.is_empty() {
+                    None
+                } else {
+                    Some(values)
+                };
+                self.ignore_semicolons()?;
+                let body = self.parse_block()?.stmts;
+                catches.push(CatchClause {
+                    values,
+                    body,
+                    location: catch_token.1,
+                });
+            }
+            Ok(Rc::new(Stmt(StmtType::Try(code, catches), try_token.1)))
         } else if self.is_before_assignment_or_declaration()? {
             let init_stmt = self.parse_assignment_or_declaration(ExprTypeRestrictions::Any)?;
             let assignment = match &init_stmt.0 {

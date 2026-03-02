@@ -25,6 +25,7 @@ mod min;
 mod process;
 mod queue;
 mod range;
+pub mod runtime_error;
 mod stack;
 mod string;
 mod sum;
@@ -157,6 +158,7 @@ impl BuiltinCollector {
 
 static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
     BuiltinCollector::new()
+        .add_type_init::<runtime_error::RuntimeError>(NO_PATH, runtime_error::init)
         .add_constant(ROOT_PATH, "Infinity", constants::infinity)
         .add_constant(ROOT_PATH, "NaN", constants::nan)
         .add_type::<AsBasicAggregator<user::User>>(ROOT_PATH)

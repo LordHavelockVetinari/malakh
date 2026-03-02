@@ -19,9 +19,12 @@ mod vm;
 struct Args {
     #[clap(flatten)]
     source_args: SourceArgs,
+    /// print error values directly to stderr with no extra information
+    #[arg(long)]
+    raw_errors: bool,
     /// print debug information after compiling the program
     #[arg(long)]
-    printvm: bool,
+    print_vm: bool,
     /// compile the program and find errors, but do not run it
     #[arg(long)]
     check: bool,
@@ -72,7 +75,8 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    if args.printvm {
+    vm.options_mut().raw_errors = args.raw_errors;
+    if args.print_vm {
         dbg!(&vm);
     }
     if !args.check {

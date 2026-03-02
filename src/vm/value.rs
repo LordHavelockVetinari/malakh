@@ -51,6 +51,18 @@ impl Value {
         self.as_addr() & Self::PTR_TAG_MASK
     }
 
+    pub fn type_name(self) -> &'static str {
+        match self.tag() {
+            Self::BUILTIN_PROCESS_TAG | Self::USER_PROCESS_TAG => "Process",
+            Self::SMALL_INT_TAG | Self::BIG_INT_TAG => "Int",
+            Self::FLOAT_TAG => "Float",
+            Self::STRING_TAG => "String",
+            Self::SYMBOL_TAG => "Symbol",
+            Self::CAPTURE_TAG => self.as_capture_ref().unwrap().value().type_name(),
+            _ => unreachable!(),
+        }
+    }
+
     pub fn is_small_int(self) -> bool {
         self.as_addr() & Self::PTR_TAG_MASK == Self::SMALL_INT_TAG
     }

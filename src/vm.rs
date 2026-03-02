@@ -2,7 +2,7 @@ mod big_int;
 pub mod builder;
 pub mod builtin_process;
 mod capture;
-mod error;
+pub mod error;
 pub mod examples;
 mod float;
 pub mod gc;
@@ -10,6 +10,7 @@ mod global_variable;
 mod instruction;
 pub mod macros;
 pub mod opcode;
+pub mod options;
 pub mod process;
 pub mod string;
 pub mod symbol;
@@ -22,8 +23,11 @@ pub use value::Value;
 
 use crate::vm::builder::VmBuilder;
 use crate::vm::builtin_process::{BuiltinProcessFamily, BuiltinProcessRef};
+use crate::vm::error::ErrorRef;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::global_variable::GlobalVariable;
+use crate::vm::options::VmOptions;
+use crate::vm::process::{AnyProcessRef, ProcessState};
 use crate::vm::user_process::UserProcessFamily;
 
 #[derive(Debug)]
@@ -38,6 +42,7 @@ pub struct Vm {
     gc: GarbageCollector,
     // A place where any builtin process can put temporary data.
     temporary1: Option<Value>,
+    options: VmOptions,
 }
 
 impl Vm {
@@ -47,6 +52,10 @@ impl Vm {
 
     pub fn get_builtin_family(&self, index: u32) -> &'static BuiltinProcessFamily {
         self.builtin_process_families[index as usize]
+    }
+
+    pub fn instruction_pointer(&self) -> *const Instruction {
+        self.instruction_pointer
     }
 
     pub fn register(&self, n: u16) -> Value {
@@ -73,6 +82,14 @@ impl Vm {
 
     pub fn assert_temporary1_none(&self) {
         assert!(self.temporary1.is_none());
+    }
+
+    pub fn options(&self) -> &VmOptions {
+        &self.options
+    }
+
+    pub fn options_mut(&mut self) -> &mut VmOptions {
+        &mut self.options
     }
 
     pub fn gc_mut(&mut self) -> &mut GarbageCollector {
@@ -105,6 +122,29 @@ impl Vm {
 
     pub fn current_process(&self) -> UserProcessRef {
         *self.call_stack.last().expect("call stack is empty")
+    }
+
+    pub fn throw_from_current_process(&mut self, error: ErrorRef) {
+        let mut proc = self.current_process();
+        *proc.output_slot_mut() = Value::from(error);
+        debug_assert!(!proc.take_can_resume());
+        *proc.state_mut() = ProcessState::Err;
+        self.pause_user_process();
+    }
+
+    fn _propagate_error_inner(&mut self, original_process: AnyProcessRef) {
+        let cause = original_process
+            .error(self)
+            .expect("cannot propagate error unless original process is in .Err state");
+        let error = ErrorRef::new_propagated(self, cause);
+        self.throw_from_current_process(error);
+    }
+
+    pub fn propagate_error<P>(&mut self, original_process: P)
+    where
+        AnyProcessRef: From<P>,
+    {
+        self._propagate_error_inner(AnyProcessRef::from(original_process));
     }
 
     pub fn pause_user_process(&mut self) {
@@ -162,3 +202,17 @@ impl Vm {
         }
     }
 }
+
+macro_rules! throw_from_current_process {
+    ($vm:expr, $format:literal $(, $($t:tt)*)?) => {
+        {
+            let error = $crate::vm::error::ErrorRef::from_string(
+                $vm,
+                &format!($format $(, $($t)*)?)
+            );
+            $vm.throw_from_current_process(error);
+        }
+    }
+}
+
+pub(crate) use throw_from_current_process;

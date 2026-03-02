@@ -173,3 +173,9 @@ impl BuiltinProcessRef {
         false
     }
 }
+
+impl From<BuiltinProcessRef> for Value {
+    fn from(process: BuiltinProcessRef) -> Self {
+        Value::from_builtin_process_ref(process)
+    }
+}

@@ -90,6 +90,19 @@ pub struct SwitchCase {
 }
 
 #[derive(Debug)]
+pub enum RaiseType {
+    Err,
+    Throw,
+}
+
+#[derive(Debug)]
+pub struct CatchClause {
+    pub values: Option<Vec<Rc<Expr>>>,
+    pub body: Vec<Rc<Stmt>>,
+    pub location: Location,
+}
+
+#[derive(Debug)]
 pub enum StmtType {
     Expr(Rc<Expr>),
     Declaration(Vec<(String, Location)>),
@@ -97,10 +110,12 @@ pub enum StmtType {
     AssignmentElse(Rc<Assignment>, Vec<Rc<Stmt>>),
     Debug(Rc<Expr>),
     Out(Vec<Argument>),
+    Raise(RaiseType, Vec<Argument>),
     Jump(JumpType),
     If(Condition, Vec<Rc<Stmt>>, Vec<Rc<Stmt>>),
     Switch(Rc<Expr>, Vec<SwitchCase>),
     Loop(Option<Condition>, Vec<Rc<Stmt>>),
+    Try(Vec<Rc<Stmt>>, Vec<CatchClause>),
 }
 
 #[derive(Debug)]
@@ -170,11 +185,13 @@ pub trait CodeVisitor {
     fn visit_assignment_stmt(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_assignment_else(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_out(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
+    fn visit_raise(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_jump(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_debug(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_switch(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_if(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_loop(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
+    fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Self::Output;
     fn visit_import_declaration(&mut self, decl: &Rc<ImportDeclaration>) -> Self::Output;
     fn visit_code_file(&mut self, file: &Rc<CodeFile>) -> Self::Output;
@@ -225,11 +242,13 @@ impl VisitableCode for &Rc<Stmt> {
             StmtType::Assignment(..) => visitor.visit_assignment_stmt(self),
             StmtType::AssignmentElse(..) => visitor.visit_assignment_else(self),
             StmtType::Out(..) => visitor.visit_out(self),
+            StmtType::Raise(..) => visitor.visit_raise(self),
             StmtType::Jump(..) => visitor.visit_jump(self),
             StmtType::Debug(..) => visitor.visit_debug(self),
             StmtType::If(..) => visitor.visit_if(self),
             StmtType::Switch(..) => visitor.visit_switch(self),
             StmtType::Loop(..) => visitor.visit_loop(self),
+            StmtType::Try(..) => visitor.visit_try(self),
         }
     }
 }
@@ -363,6 +382,16 @@ pub trait DefaultCodeVisitor: Sized {
         Ok(())
     }
 
+    fn visit_raise(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        let Stmt(StmtType::Raise(_, args), _) = &**stmt else {
+            panic!("visitor method got wrong variant");
+        };
+        for arg in args {
+            self.visit(&arg.expr)?;
+        }
+        Ok(())
+    }
+
     fn visit_jump(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         Ok(())
     }
@@ -415,6 +444,24 @@ pub trait DefaultCodeVisitor: Sized {
         }
         for stmt in stmts {
             self.visit(stmt)?;
+        }
+        Ok(())
+    }
+
+    fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        let Stmt(StmtType::Try(code, catches), _) = &**stmt else {
+            panic!("visitor method got wrong variant");
+        };
+        for stmt in code {
+            self.visit(stmt)?;
+        }
+        for catch in catches {
+            for val in catch.values.iter().flatten() {
+                self.visit(val);
+            }
+            for stmt in &catch.body {
+                self.visit(stmt);
+            }
         }
         Ok(())
     }
@@ -509,6 +556,10 @@ impl<U: DefaultCodeVisitor> CodeVisitor for U {
         DefaultCodeVisitor::visit_out(self, stmt)
     }
 
+    fn visit_raise(&mut self, stmt: &Rc<Stmt>) -> Self::Output {
+        DefaultCodeVisitor::visit_raise(self, stmt)
+    }
+
     fn visit_jump(&mut self, stmt: &Rc<Stmt>) -> Self::Output {
         DefaultCodeVisitor::visit_jump(self, stmt)
     }
@@ -527,6 +578,10 @@ impl<U: DefaultCodeVisitor> CodeVisitor for U {
 
     fn visit_loop(&mut self, stmt: &Rc<Stmt>) -> Self::Output {
         DefaultCodeVisitor::visit_loop(self, stmt)
+    }
+
+    fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Self::Output {
+        DefaultCodeVisitor::visit_try(self, stmt)
     }
 
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Self::Output {

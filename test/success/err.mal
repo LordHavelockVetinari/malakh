@@ -1,0 +1,9 @@
+Main -> {
+    err [Range 5]... in... "..."
+    err "1st"
+    foo := {
+        err "2nd" "3rd"
+        err "ignore me"
+    }
+    foo
+}

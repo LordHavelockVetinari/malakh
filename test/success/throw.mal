@@ -1,0 +1,6 @@
+Main -> {
+    err .Foo
+    throw .Bar .Baz
+    .Quux
+    throw .Spam
+}

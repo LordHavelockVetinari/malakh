@@ -4,6 +4,7 @@ use crate::builtin;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::global_variable::GlobalVariable;
 use crate::vm::macros::leak_code;
+use crate::vm::options::VmOptions;
 use crate::vm::string::StringRef;
 use crate::vm::symbol::Symbol;
 use crate::vm::user_process::UserProcessFamily;
@@ -105,6 +106,7 @@ impl VmBuilder {
             memory: vec![Value::default()].leak(),
             gc: self.0.gc,
             temporary1: None,
+            options: VmOptions::default(),
         }
     }
 }

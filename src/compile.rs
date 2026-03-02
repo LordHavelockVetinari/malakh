@@ -21,8 +21,9 @@ use crate::compile::process_family_collector::ProcessFamilyCollector;
 use crate::compile::register_allocator::{ChosenRegister, RegisterChoice};
 use crate::parse::location::Location;
 use crate::parse::tree::{
-    ArgumentType, Assignment, AssignmentType, BinaryOperator, CodeFile, CodeVisitor, Condition,
-    ConstantLiteral, Expr, ExprType, GlobalDeclaration, JumpType, Stmt, StmtType, UnaryOperator,
+    Argument, ArgumentType, Assignment, AssignmentType, BinaryOperator, CodeFile, CodeVisitor,
+    Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, JumpType, RaiseType, Stmt,
+    StmtType, UnaryOperator,
 };
 use crate::vm::builder::VmBuilder;
 use crate::vm::macros::{code, instruction};
@@ -443,6 +444,14 @@ impl Compiler {
         }
     }
 
+    fn expr_needs_error_propagation(expr: &Rc<Expr>) -> bool {
+        match &expr.0 {
+            ExprType::Identifier(..) | ExprType::Path(..) | ExprType::Send(..) => true,
+            ExprType::Parenthesized(inner) => Self::expr_needs_error_propagation(inner),
+            _ => false,
+        }
+    }
+
     fn compile_block(
         &mut self,
         stmts: &[Rc<Stmt>],
@@ -550,6 +559,92 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_args<F>(
+        &mut self,
+        args: &[Argument],
+        builder: &mut ProcessFamilyBuilder,
+        mut each_arg: F,
+    ) -> Result<(), CompilationError>
+    where
+        F: FnMut(u16, &mut ProcessFamilyBuilder) -> Result<(), CompilationError>,
+    {
+        for arg in args {
+            match arg.typ {
+                ArgumentType::Single => {
+                    let reg = self.compile_expr(&arg.expr, RegisterChoice::Any, builder)?;
+                    each_arg(reg.index, builder)?;
+                    reg.dealloc(builder.register_allocator_mut());
+                }
+                ArgumentType::InLoop => {
+                    let in_reg = builder
+                        .register_allocator_mut()
+                        .alloc_temporary(&arg.location)?;
+                    let bool_reg = builder
+                        .register_allocator_mut()
+                        .alloc_temporary(&arg.location)?;
+                    builder.register_allocator_mut().dealloc(bool_reg);
+                    builder.add_code(code! {
+                        OPT_IN in_reg, bool_reg, 0;
+                    });
+
+                    let continue_jump_target = builder.next_instruction_index();
+                    builder.enter_new_loop(continue_jump_target, arg.location.clone());
+                    builder.add_break_jump(instruction! {
+                        JUMP_UNLESS bool_reg, 0;
+                    });
+
+                    each_arg(in_reg, builder)?;
+                    builder.register_allocator_mut().dealloc(in_reg);
+
+                    builder.add_code(code! {
+                        OPT_IN in_reg, bool_reg, 0;
+                    });
+                    builder.add_continue_jump(instruction! {
+                        JUMP_IF bool_reg, 0;
+                    })?;
+                    builder.exit_loop()?;
+                }
+                ArgumentType::ReceiveLoop => {
+                    // Register 0 might be overwritten, so use AllocNew.
+                    let source_reg =
+                        self.compile_expr(&arg.expr, RegisterChoice::AllocNew, builder)?;
+
+                    let recv_reg = builder
+                        .register_allocator_mut()
+                        .alloc_temporary(&arg.location)?;
+                    let bool_reg = builder
+                        .register_allocator_mut()
+                        .alloc_temporary(&arg.location)?;
+                    builder.register_allocator_mut().dealloc(bool_reg);
+                    builder.add_code(code! {
+                        NO_IN source_reg.index, 0, 0;
+                        TRY_RECEIVE recv_reg, bool_reg, source_reg.index;
+                    });
+
+                    let continue_jump_target = builder.next_instruction_index();
+                    builder.enter_new_loop(continue_jump_target, arg.location.clone());
+                    builder.add_break_jump(instruction! {
+                        JUMP_UNLESS bool_reg, 0;
+                    });
+
+                    each_arg(recv_reg, builder)?;
+                    builder.register_allocator_mut().dealloc(recv_reg);
+
+                    builder.add_code(code! {
+                        NO_IN source_reg.index, 0, 0;
+                        TRY_RECEIVE recv_reg, bool_reg, source_reg.index;
+                    });
+                    builder.add_continue_jump(instruction! {
+                        JUMP_IF bool_reg, 0;
+                    })?;
+                    builder.exit_loop()?;
+                    source_reg.dealloc(builder.register_allocator_mut());
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn compile_stmt(
         &mut self,
         stmt: &Rc<Stmt>,
@@ -559,6 +654,11 @@ impl Compiler {
             StmtType::Expr(expr) => {
                 let reg = self.compile_expr(expr, RegisterChoice::Any, builder)?;
                 reg.dealloc(builder.register_allocator_mut());
+                if Self::expr_needs_error_propagation(expr) {
+                    builder.add_code(code! {
+                        PROPAGATE reg.index, 0, 0;
+                    });
+                }
                 Ok(())
             }
             StmtType::Jump(JumpType::Stop) => {
@@ -634,57 +734,32 @@ impl Compiler {
                 }
                 Ok(())
             }
-            StmtType::Out(outputs) => {
-                for out in outputs {
-                    match out.typ {
-                        ArgumentType::Single => {
-                            let reg = self.compile_expr(&out.expr, RegisterChoice::Any, builder)?;
-                            reg.dealloc(builder.register_allocator_mut());
-                            builder.add_code(code! {
-                                OUT reg.index, 0, 0;
-                            });
-                        }
-                        ArgumentType::InLoop => {
-                            let in_reg = builder
-                                .register_allocator_mut()
-                                .alloc_temporary(&out.location)?;
-                            let bool_reg = builder
-                                .register_allocator_mut()
-                                .alloc_temporary(&out.location)?;
-                            builder.register_allocator_mut().dealloc(in_reg);
-                            builder.register_allocator_mut().dealloc(bool_reg);
-                            builder.add_code(code! {
-                                OPT_IN in_reg, bool_reg, 0;
-                                JUMP_UNLESS bool_reg, 3;
-                                OUT in_reg, 0, 0;
-                                OPT_IN in_reg, bool_reg, 0;
-                                JUMP_IF bool_reg, !2;
-                            });
-                        }
-                        ArgumentType::ReceiveLoop => {
-                            // Register 0 might be overwritten, so use AllocNew.
-                            let source_reg =
-                                self.compile_expr(&out.expr, RegisterChoice::AllocNew, builder)?;
-                            let recv_reg = builder
-                                .register_allocator_mut()
-                                .alloc_temporary(&out.location)?;
-                            let bool_reg = builder
-                                .register_allocator_mut()
-                                .alloc_temporary(&out.location)?;
-                            source_reg.dealloc(builder.register_allocator_mut());
-                            builder.register_allocator_mut().dealloc(recv_reg);
-                            builder.register_allocator_mut().dealloc(bool_reg);
-                            builder.add_code(code! {
-                                NO_IN source_reg.index, 0, 0;
-                                TRY_RECEIVE recv_reg, bool_reg, source_reg.index;
-                                JUMP_UNLESS bool_reg, 4;
-                                OUT recv_reg, 0, 0;
-                                NO_IN source_reg.index, 0, 0;
-                                TRY_RECEIVE recv_reg, bool_reg, source_reg.index;
-                                JUMP_IF bool_reg, !3;
-                            });
-                        }
-                    }
+            StmtType::Out(outputs) => self.compile_args(outputs, builder, |output, builder| {
+                builder.add_code(code! {
+                    OUT output, 0, 0;
+                });
+                Ok(())
+            }),
+            StmtType::Raise(raise_type, args) => {
+                let error_reg = builder.register_allocator_mut().alloc_temporary(&stmt.1)?;
+                let approx_size = u32::try_from(args.len()).unwrap_or(u32::MAX);
+                builder.add_code(code! {
+                    NEW_ERROR error_reg, approx_size;
+                });
+                self.compile_args(args, builder, |value, builder| {
+                    builder.add_code(code! {
+                        EXTEND_ERROR error_reg, value, 0;
+                    });
+                    Ok(())
+                })?;
+                builder.register_allocator_mut().dealloc(error_reg);
+                match raise_type {
+                    RaiseType::Err => builder.add_code(code! {
+                        ERR error_reg, 0, 0;
+                    }),
+                    RaiseType::Throw => builder.add_code(code! {
+                        THROW error_reg, 0, 0;
+                    }),
                 }
                 Ok(())
             }
@@ -744,6 +819,7 @@ impl Compiler {
                 }
                 Ok(())
             }
+            StmtType::Try(_, _) => todo!(),
         }
     }
 
@@ -852,10 +928,11 @@ impl Compiler {
             }
             let user_family_index = builtin::ROOT_MODULE.constructor_definitions["User"];
             let const_stop = self.add_const_symbol("Stop")?;
-            let const_out = self.add_const_symbol("Out")?;
             let const_in = self.add_const_symbol("In")?;
             let const_opt_in = self.add_const_symbol("OptIn")?;
             let const_fork_in = self.add_const_symbol("ForkIn")?;
+            let const_out = self.add_const_symbol("Out")?;
+            let const_err = self.add_const_symbol("Err")?;
             builder.add_code(code! {
                 NEW_BUILTIN 3, user_family_index;
                 STATE 2, 1, 0;
@@ -890,6 +967,13 @@ impl Compiler {
                 EQUALS 0, 0, 2;
                 JUMP_UNLESS 0, 1;
                 EXIT 0, 0, 0;
+                CONST 0, const_err;
+                EQUALS 0, 0, 2;
+                JUMP_UNLESS 0, 4;
+                PEEK_ERR 0, 1, 0;
+                DISPLAY_ERROR 0, 0, 0;
+                RECEIVE_ERR 0, 1, 0;
+                JUMP 0, !38;
                 UNREACHABLE 0, 0, 0;
             });
             builder.build()

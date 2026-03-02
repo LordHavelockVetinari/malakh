@@ -1,14 +1,16 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
+use std::io::Write;
 use std::mem;
 
 use either::Either::{Left, Right};
 
-use crate::vm::Value;
 use crate::vm::builtin_process::BuiltinProcessRef;
 use crate::vm::capture::CaptureRef;
+use crate::vm::error::ErrorRef;
 use crate::vm::process::ProcessState;
 use crate::vm::user_process::UserProcessRef;
+use crate::vm::{Value, throw_from_current_process};
 
 use super::{Instruction, Vm};
 
@@ -88,9 +90,17 @@ opcodes! {
     SEND (3) = 78;
     NO_IN (3) = 79;
     STATE (3) = 80;
+    NEW_ERROR (2) = 90;
+    EXTEND_ERROR (3) = 91;
+    ERR (3) = 92;
+    THROW (3) = 93;
+    RECEIVE_ERR (3) = 94;
+    PEEK_ERR (3) = 96;
+    PROPAGATE (3) = 97;
     DEBUG (3) = 100;
     EXIT (3) = 101;
-    ERROR_NO_CASE (3) = 102;
+    DISPLAY_ERROR (3) = 102;
+    ERROR_NO_CASE (3) = 103;
     UNREACHABLE (3) = 255;
 }
 
@@ -124,7 +134,13 @@ fn run_add(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(result) = Value::add(src1, src2, &mut vm.gc) else {
-        todo!()
+        throw_from_current_process!(
+            vm,
+            "type error: {} + {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
     *vm.register_mut(dst) = result;
 }
@@ -135,7 +151,13 @@ fn run_subtract(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(result) = Value::subtract(src1, src2, &mut vm.gc) else {
-        todo!()
+        throw_from_current_process!(
+            vm,
+            "type error: {} - {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
     *vm.register_mut(dst) = result;
 }
@@ -146,7 +168,13 @@ fn run_multiply(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(result) = Value::multiply(src1, src2, &mut vm.gc) else {
-        todo!()
+        throw_from_current_process!(
+            vm,
+            "type error: {} * {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
     *vm.register_mut(dst) = result;
 }
@@ -157,9 +185,18 @@ fn run_divide(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(result) = Value::divide(src1, src2, &mut vm.gc) else {
-        todo!()
+        throw_from_current_process!(
+            vm,
+            "type error: {} / {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
-    let Some(result) = result else { todo!() };
+    let Some(result) = result else {
+        throw_from_current_process!(vm, "division by zero: {:?} / {:?}", src1, src2);
+        return;
+    };
     *vm.register_mut(dst) = result;
 }
 
@@ -169,14 +206,23 @@ fn run_remainder(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(result) = Value::remainder(src1, src2, &mut vm.gc) else {
-        todo!()
+        throw_from_current_process!(
+            vm,
+            "type error: {} % {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
-    let Some(result) = result else { todo!() };
+    let Some(result) = result else {
+        throw_from_current_process!(vm, "division by zero: {:?} % {:?}", src1, src2);
+        return;
+    };
     *vm.register_mut(dst) = result;
 }
 
 fn run_power(_vm: &mut Vm, inst: Instruction) {
-    debug_assert_eq!(inst.opcode(), ADD);
+    debug_assert_eq!(inst.opcode(), POWER);
     todo!();
 }
 
@@ -185,7 +231,8 @@ fn run_unary_plus(vm: &mut Vm, inst: Instruction) {
     let (dst, src, _) = inst.as_three_operand();
     let src = vm.register(src);
     if !src.is_number() {
-        todo!();
+        throw_from_current_process!(vm, "type error: +{}", src.type_name());
+        return;
     }
     *vm.register_mut(dst) = src;
 }
@@ -195,7 +242,8 @@ fn run_negate(vm: &mut Vm, inst: Instruction) {
     let (dst, src, _) = inst.as_three_operand();
     let src = vm.register(src);
     let Ok(result) = src.negate(&mut vm.gc) else {
-        todo!();
+        throw_from_current_process!(vm, "type error: -{}", src.type_name());
+        return;
     };
     *vm.register_mut(dst) = result;
 }
@@ -224,7 +272,13 @@ fn run_less(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(ord) = src1.compare(src2) else {
-        todo!();
+        throw_from_current_process!(
+            vm,
+            "incomparable types: {}, {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
     *vm.register_mut(dst) = Value::from_bool(ord == Some(Ordering::Less));
 }
@@ -235,7 +289,13 @@ fn run_less_or_equal(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Ok(ord) = src1.compare(src2) else {
-        todo!();
+        throw_from_current_process!(
+            vm,
+            "incomparable types: {}, {}",
+            src1.type_name(),
+            src2.type_name(),
+        );
+        return;
     };
     *vm.register_mut(dst) = Value::from_bool(ord.is_some_and(Ordering::is_le));
 }
@@ -243,8 +303,14 @@ fn run_less_or_equal(vm: &mut Vm, inst: Instruction) {
 fn run_not(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), NOT);
     let (dst, src, _) = inst.as_three_operand();
-    let Some(src) = vm.register(src).as_bool() else {
-        todo!()
+    let src = vm.register(src);
+    let Some(src) = src.as_bool() else {
+        if src.is_symbol() {
+            throw_from_current_process!(vm, "expected a Boolean, got {:?}", src);
+        } else {
+            throw_from_current_process!(vm, "type error: not {}", src.type_name());
+        }
+        return;
     };
     let result = Value::from_bool(!src);
     *vm.register_mut(dst) = result;
@@ -253,11 +319,21 @@ fn run_not(vm: &mut Vm, inst: Instruction) {
 fn run_xor(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), XOR);
     let (dst, src1, src2) = inst.as_three_operand();
-    let Some(src1) = vm.register(src1).as_bool() else {
-        todo!()
-    };
-    let Some(src2) = vm.register(src2).as_bool() else {
-        todo!()
+    let src1 = vm.register(src1);
+    let src2 = vm.register(src2);
+    let (Some(src1), Some(src2)) = (src1.as_bool(), src2.as_bool()) else {
+        if !src1.is_symbol() || !src2.is_symbol() {
+            throw_from_current_process!(
+                vm,
+                "type error: {} xor {}",
+                src1.type_name(),
+                src2.type_name(),
+            );
+        } else {
+            let non_bool = if src1.is_bool() { src2 } else { src1 };
+            throw_from_current_process!(vm, "expected a Boolean, got {:?}", non_bool);
+        }
+        return;
     };
     let result = Value::from_bool(src1 ^ src2);
     *vm.register_mut(dst) = result;
@@ -268,7 +344,8 @@ fn run_move_bool(vm: &mut Vm, inst: Instruction) {
     let (dst, src, _) = inst.as_three_operand();
     let result = vm.register(src);
     if !result.is_bool() {
-        todo!("error in MOVE_BOOL");
+        throw_from_current_process!(vm, "expected a Boolean, got {:?}", result);
+        return;
     }
     *vm.register_mut(dst) = result;
 }
@@ -286,7 +363,7 @@ fn run_jump_unless(vm: &mut Vm, inst: Instruction) {
     let src = vm.register(src);
     let n = n as i32 as isize;
     match src.as_bool() {
-        None => todo!(),
+        None => throw_from_current_process!(vm, "expected a Boolean, got {:?}", src),
         Some(false) => vm.jump(n),
         Some(true) => {}
     }
@@ -298,7 +375,7 @@ fn run_jump_if(vm: &mut Vm, inst: Instruction) {
     let src = vm.register(src);
     let n = n as i32 as isize;
     match src.as_bool() {
-        None => todo!(),
+        None => throw_from_current_process!(vm, "expected a Boolean, got {:?}", src),
         Some(false) => {}
         Some(true) => vm.jump(n),
     }
@@ -316,7 +393,8 @@ fn run_load(vm: &mut Vm, inst: Instruction) {
     let (dst, idx) = inst.as_two_operand();
     let var = &vm.global_variables[idx as usize];
     let Some(&result) = var.value().get() else {
-        todo!("recursively defined lazy variables unimplemented")
+        throw_from_current_process!(vm, "recursively-defined global variable");
+        return;
     };
     *vm.register_mut(dst) = result;
 }
@@ -417,18 +495,23 @@ fn run_receive(vm: &mut Vm, inst: Instruction) {
     let (dst, src, _) = inst.as_three_operand();
     let src = vm.register(src);
     if let Some(mut proc) = src.as_builtin_process_ref() {
-        if proc.state() != ProcessState::Out {
-            todo!(
-                "receive implemented only in Out state, state was {:?}",
-                proc.state()
-            );
+        match proc.state() {
+            ProcessState::Out => {
+                *vm.register_mut(dst) = mem::take(proc.output_slot_mut());
+                vm.enter_builtin_process(proc, None);
+            }
+            ProcessState::Err => vm.propagate_error(proc),
+            _ => throw_from_current_process!(
+                vm,
+                "failed to receive output: process was in {:?} state",
+                proc.state(),
+            ),
         }
-        *vm.register_mut(dst) = mem::take(proc.output_slot_mut());
-        vm.enter_builtin_process(proc, None);
         return;
     }
     let Some(mut proc) = src.as_user_process_ref() else {
-        todo!("receive for non-process is unimplemented");
+        throw_from_current_process!(vm, "type error: [{}]", src.type_name());
+        return;
     };
     match proc.state() {
         ProcessState::Out => {
@@ -436,9 +519,11 @@ fn run_receive(vm: &mut Vm, inst: Instruction) {
             *proc.state_mut() = ProcessState::Run;
             vm.enter_user_process(proc);
         }
-        _ => todo!(
-            "receive implemented only in Out state, state was {:?}",
-            proc.state()
+        ProcessState::Err => vm.propagate_error(proc),
+        _ => throw_from_current_process!(
+            vm,
+            "failed to receive output: process was in {:?} state",
+            proc.state(),
         ),
     }
 }
@@ -458,7 +543,8 @@ fn run_try_receive(vm: &mut Vm, inst: Instruction) {
         return;
     }
     let Some(mut proc) = src.as_user_process_ref() else {
-        todo!("try_receive for non-process is unimplemented");
+        throw_from_current_process!(vm, "type error: [{}]", src.type_name());
+        return;
     };
     match proc.state() {
         ProcessState::Out => {
@@ -477,20 +563,23 @@ fn run_peek(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), PEEK);
     let (dst, src, _) = inst.as_three_operand();
     let src = vm.register(src);
-    if let Some(proc) = src.as_builtin_process_ref() {
-        if proc.state() != ProcessState::Out {
-            todo!("expected Out state");
-        }
-        *vm.register_mut(dst) = proc.output_slot();
+    let Some(proc) = src.as_any_process_ref() else {
+        throw_from_current_process!(vm, "type error: [Peek {}]", src.type_name());
         return;
-    }
-    let Some(proc) = src.as_user_process_ref() else {
-        todo!("peek for non-process is unimplemented");
     };
-    if proc.state() != ProcessState::Out {
-        todo!("expected Out state");
+    match proc.state() {
+        ProcessState::Out => {
+            *vm.register_mut(dst) = proc.output_slot();
+        }
+        ProcessState::Err => vm.propagate_error(proc),
+        _ => {
+            throw_from_current_process!(
+                vm,
+                "failed to peek: process was in {:?} state",
+                proc.state()
+            )
+        }
     }
-    *vm.register_mut(dst) = proc.memory()[0];
 }
 
 fn run_send(vm: &mut Vm, inst: Instruction) {
@@ -499,7 +588,8 @@ fn run_send(vm: &mut Vm, inst: Instruction) {
     let src1 = vm.register(src1);
     let src2 = vm.register(src2);
     let Some(proc) = src1.as_any_process_ref() else {
-        todo!("send to non-process unimplemented");
+        throw_from_current_process!(vm, "type error: cannot send input to {}", src1.type_name());
+        return;
     };
     match (proc.state(), proc.builtin_or_user_defined()) {
         (ProcessState::In | ProcessState::OptIn | ProcessState::ForkIn, Left(proc)) => {
@@ -526,7 +616,12 @@ fn run_send(vm: &mut Vm, inst: Instruction) {
             *proc.state_mut() = ProcessState::Run;
             vm.enter_user_process(proc);
         }
-        _ => todo!("send to process not in In state uimplemented"),
+        (ProcessState::ForkIn, Right(_)) => todo!("send to user process in ForkIn state"),
+        _ => throw_from_current_process!(
+            vm,
+            "failed to send input: process was in {:?} state",
+            proc.state(),
+        ),
     }
 }
 
@@ -541,7 +636,8 @@ fn run_no_in(vm: &mut Vm, inst: Instruction) {
         return;
     }
     let Some(mut proc) = src.as_user_process_ref() else {
-        todo!("NO_IN unimplemented for non process")
+        throw_from_current_process!(vm, "type error: [{}]", src.type_name());
+        return;
     };
     if proc.state() != ProcessState::OptIn {
         return;
@@ -559,9 +655,121 @@ fn run_state(vm: &mut Vm, inst: Instruction) {
     let (dst, src, _) = inst.as_three_operand();
     let src = vm.register(src);
     let Some(proc) = src.as_any_process_ref() else {
-        todo!();
+        throw_from_current_process!(vm, "type error: [State {}]", src.type_name());
+        return;
     };
     *vm.register_mut(dst) = proc.state().as_value();
+}
+
+fn run_new_error(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), NEW_ERROR);
+    let (dst, size) = inst.as_two_operand();
+    let size = usize::try_from(size).expect("failed to allocate error");
+    let mut error = ErrorRef::new(vm);
+    error.reserve(size);
+    *vm.register_mut(dst) = Value::from(error);
+}
+
+fn run_extend_error(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), EXTEND_ERROR);
+    let (dst, src, _) = inst.as_three_operand();
+    let mut dst = unsafe { ErrorRef::from_value(vm.register(dst), vm) };
+    let src = vm.register(src);
+    dst.extend(src);
+}
+
+fn run_err(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), ERR);
+    let (src, _, _) = inst.as_three_operand();
+    let src = unsafe { ErrorRef::from_value(vm.register(src), vm) };
+    let mut proc = vm.current_process();
+    *proc.output_slot_mut() = Value::from(src);
+    *proc.state_mut() = ProcessState::Err;
+    proc.set_can_resume();
+    vm.pause_user_process();
+}
+
+fn run_throw(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), THROW);
+    let (src, _, _) = inst.as_three_operand();
+    let src = unsafe { ErrorRef::from_value(vm.register(src), vm) };
+    vm.throw_from_current_process(src);
+}
+
+fn run_receive_err(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), RECEIVE_ERR);
+    let (dst, src, _) = inst.as_three_operand();
+    let src = vm.register(src);
+    if let Some(mut proc) = src.as_builtin_process_ref() {
+        if proc.state() != ProcessState::Err {
+            throw_from_current_process!(
+                vm,
+                "failed to receive error: process was in {} state",
+                src.type_name(),
+            );
+            return;
+        }
+        *vm.register_mut(dst) = mem::take(proc.output_slot_mut());
+        vm.enter_builtin_process(proc, None);
+        return;
+    }
+    let Some(mut proc) = src.as_user_process_ref() else {
+        throw_from_current_process!(
+            vm,
+            "type error: attempt to receive error of {}",
+            src.type_name(),
+        );
+        return;
+    };
+    match proc.state() {
+        ProcessState::Err => {
+            *vm.register_mut(dst) = mem::take(proc.output_slot_mut());
+            if proc.take_can_resume() {
+                *proc.state_mut() = ProcessState::Run;
+                vm.enter_user_process(proc);
+            } else {
+                *proc.state_mut() = ProcessState::Stop;
+            }
+        }
+        _ => throw_from_current_process!(
+            vm,
+            "failed to receive error: process was in {} state",
+            src.type_name(),
+        ),
+    }
+}
+
+fn run_peek_err(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), PEEK_ERR);
+    let (dst, src, _) = inst.as_three_operand();
+    let src = vm.register(src);
+    let Some(proc) = src.as_any_process_ref() else {
+        throw_from_current_process!(
+            vm,
+            "type error: attempt to peek at error of {}",
+            src.type_name(),
+        );
+        return;
+    };
+    if proc.state() != ProcessState::Err {
+        throw_from_current_process!(
+            vm,
+            "failed to peek at error: process was in {} state",
+            src.type_name(),
+        );
+    }
+    *vm.register_mut(dst) = proc.output_slot();
+}
+
+fn run_propagate(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), PROPAGATE);
+    let (src, _, _) = inst.as_three_operand();
+    let src = vm.register(src);
+    if let Some(proc) = src.as_any_process_ref()
+        && proc.state() == ProcessState::Err
+    {
+        vm.propagate_error(proc);
+    }
 }
 
 fn run_debug(vm: &mut Vm, inst: Instruction) {
@@ -576,9 +784,24 @@ fn run_exit(_: &mut Vm, inst: Instruction) {
     std::process::exit(0);
 }
 
-fn run_error_no_case(_: &mut Vm, inst: Instruction) {
+fn run_display_error(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), DISPLAY_ERROR);
+    let (src, _, _) = inst.as_three_operand();
+    let src = unsafe { ErrorRef::from_value(vm.register(src), vm) };
+    let mut stderr = std::io::stderr();
+    if vm.options().raw_errors {
+        for value in src.values() {
+            let _ = value.write_to(&mut stderr);
+            let _ = writeln!(stderr);
+        }
+    } else {
+        let _ = src.pretty_print(&mut stderr);
+    }
+}
+
+fn run_error_no_case(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), ERROR_NO_CASE);
-    todo!("no case matched in a `switch` statement");
+    throw_from_current_process!(vm, "no case matched in 'switch' statement")
 }
 
 fn run_unreachable(_: &mut Vm, inst: Instruction) {
@@ -627,8 +850,16 @@ static OPCODE_TABLE: [InstructionFn; 256] = {
     table[SEND as usize] = run_send;
     table[NO_IN as usize] = run_no_in;
     table[STATE as usize] = run_state;
+    table[NEW_ERROR as usize] = run_new_error;
+    table[EXTEND_ERROR as usize] = run_extend_error;
+    table[ERR as usize] = run_err;
+    table[THROW as usize] = run_throw;
+    table[RECEIVE_ERR as usize] = run_receive_err;
+    table[PEEK_ERR as usize] = run_peek_err;
+    table[PROPAGATE as usize] = run_propagate;
     table[DEBUG as usize] = run_debug;
     table[EXIT as usize] = run_exit;
+    table[DISPLAY_ERROR as usize] = run_display_error;
     table[ERROR_NO_CASE as usize] = run_error_no_case;
     table[UNREACHABLE as usize] = run_unreachable;
     table

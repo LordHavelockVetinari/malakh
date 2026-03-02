@@ -1,20 +1,22 @@
 use either::Either::{self, Left, Right};
 
-use crate::vm::Value;
 use crate::vm::builtin_process::BuiltinProcessRef;
+use crate::vm::error::ErrorRef;
 use crate::vm::symbol::Symbol;
 use crate::vm::user_process::UserProcessRef;
+use crate::vm::{Value, Vm};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ProcessState {
     Run,
     Stop,
-    Out,
     In,
     OptIn,
     #[allow(unused)]
     ForkIn,
+    Out,
+    Err,
 }
 
 impl ProcessState {
@@ -23,10 +25,11 @@ impl ProcessState {
         match self {
             Run => Value::from_symbol(Symbol::RUN),
             Stop => Value::from_symbol(Symbol::STOP),
-            Out => Value::from_symbol(Symbol::OUT),
             In => Value::from_symbol(Symbol::IN),
             OptIn => Value::from_symbol(Symbol::OPT_IN),
             ForkIn => Value::from_symbol(Symbol::FORK_IN),
+            Out => Value::from_symbol(Symbol::OUT),
+            Err => Value::from_symbol(Symbol::ERR),
         }
     }
 }
@@ -62,5 +65,25 @@ impl AnyProcessRef {
             Left(proc) => proc.output_slot(),
             Right(proc) => proc.output_slot(),
         }
+    }
+
+    pub fn error(&self, vm: &mut Vm) -> Option<ErrorRef> {
+        if self.state() == ProcessState::Err {
+            Some(unsafe { ErrorRef::from_value(self.output_slot(), vm) })
+        } else {
+            None
+        }
+    }
+}
+
+impl From<BuiltinProcessRef> for AnyProcessRef {
+    fn from(builtin_process: BuiltinProcessRef) -> Self {
+        Self(Value::from_builtin_process_ref(builtin_process))
+    }
+}
+
+impl From<UserProcessRef> for AnyProcessRef {
+    fn from(user_process: UserProcessRef) -> Self {
+        Self(Value::from_user_process_ref(user_process))
     }
 }
