@@ -27,9 +27,9 @@ impl BasicFunction for ToNumber {
             return Stop;
         };
         if let Some(n) = super::to_int::string_to_int(s) {
-            Output(Value::from_integer(n, vm.gc_mut()))
+            Output(Value::alloc_from(n, vm.gc_mut()))
         } else if let Ok(x) = f64::from_str(s) {
-            Output(Value::from_f64(x, vm.gc_mut()))
+            Output(Value::alloc_from(x, vm.gc_mut()))
         } else {
             Stop
         }

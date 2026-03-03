@@ -40,12 +40,12 @@ impl VmBuilder {
     }
 
     pub fn int_constant(&mut self, value: Integer) -> Option<u32> {
-        let value = Value::from_integer(value, &mut self.0.gc);
+        let value = Value::alloc_from(value, &mut self.0.gc);
         self.constant(value)
     }
 
     pub fn float_constant(&mut self, value: f64) -> Option<u32> {
-        let value = Value::from_f64(value, &mut self.0.gc);
+        let value = Value::alloc_from(value, &mut self.0.gc);
         self.constant(value)
     }
 

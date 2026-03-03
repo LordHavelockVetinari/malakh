@@ -8,7 +8,7 @@ impl Method for Length {
     type Parent = super::Map;
 
     fn new(parent: &mut Self::Parent, vm: &mut crate::vm::Vm) -> (Self, Action) {
-        let result = Value::from_usize(parent.data.len(), vm.gc_mut());
+        let result = Value::alloc_from(parent.data.len(), vm.gc_mut());
         (Self, Action::Output(result))
     }
 

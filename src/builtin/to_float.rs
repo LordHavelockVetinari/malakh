@@ -36,6 +36,6 @@ impl BasicFunction for ToFloat {
             };
             result
         };
-        Output(Value::from_f64(result, vm.gc_mut()))
+        Output(Value::alloc_from(result, vm.gc_mut()))
     }
 }

@@ -31,7 +31,7 @@ impl BasicFunction for Bytes {
         let Some((&first, rest)) = bytes.split_first() else {
             return BasicFunctionResult::Stop;
         };
-        let first = Value::from_isize(first as isize, vm.gc_mut());
+        let first = Value::alloc_from(first as isize, vm.gc_mut());
         self.owner = input;
         self.bytes = NonNull::from(rest);
         BasicFunctionResult::Output(first)
@@ -42,7 +42,7 @@ impl BasicFunction for Bytes {
         let Some((&first, rest)) = bytes.split_first() else {
             return BasicFunctionResult::Stop;
         };
-        let first = Value::from_isize(first as isize, vm.gc_mut());
+        let first = Value::alloc_from(first as isize, vm.gc_mut());
         self.bytes = NonNull::from(rest);
         BasicFunctionResult::Output(first)
     }

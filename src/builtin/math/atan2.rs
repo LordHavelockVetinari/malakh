@@ -21,7 +21,7 @@ impl Function for Atan2 {
             todo!("type error");
         };
         if let Some(y) = self.arg1 {
-            Action::Output(Value::from_f64(y.atan2(x), vm.gc_mut()))
+            Action::Output(Value::alloc_from(y.atan2(x), vm.gc_mut()))
         } else {
             self.arg1 = Some(x);
             Action::Input

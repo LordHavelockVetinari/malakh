@@ -140,36 +140,8 @@ impl Value {
         }))
     }
 
-    pub fn from_isize(n: isize, gc: &mut GarbageCollector) -> Self {
-        if let Some(result) = Self::from_small_int(n) {
-            result
-        } else {
-            Self::from(BigIntRef::new_unchecked(Integer::from(n), gc))
-        }
-    }
-
-    pub fn from_usize(n: usize, gc: &mut GarbageCollector) -> Self {
-        if let Ok(n) = isize::try_from(n)
-            && let Some(result) = Self::from_small_int(n)
-        {
-            result
-        } else {
-            Self::from_integer(Integer::from(n), gc)
-        }
-    }
-
-    pub fn from_integer(n: Integer, gc: &mut GarbageCollector) -> Self {
-        if let Ok(n) = isize::try_from(&n)
-            && let Some(result) = Self::from_small_int(n)
-        {
-            result
-        } else {
-            Self::from(BigIntRef::new_unchecked(n, gc))
-        }
-    }
-
-    pub fn from_f64(value: f64, gc: &mut GarbageCollector) -> Self {
-        Self::from(FloatRef::new(value, gc))
+    pub fn alloc_from<T: AllocIntoValue>(x: T, gc: &mut GarbageCollector) -> Self {
+        x.alloc_into_value(gc)
     }
 
     pub fn as_small_int(self) -> Option<isize> {
@@ -351,30 +323,30 @@ impl Value {
     pub fn add(self, other: Value, gc: &mut GarbageCollector) -> Result<Value, TypeError> {
         if let (Some(n1), Some(n2)) = (self.as_int(), other.as_int()) {
             match (n1, n2) {
-                (Left(n1), Left(n2)) => Ok(Self::from_isize(n1 + n2, gc)),
-                (Left(n1), Right(n2)) => Ok(Self::from_integer(Integer::from(n1) + n2, gc)),
-                (Right(n1), Left(n2)) => Ok(Self::from_integer(n1 + Integer::from(n2), gc)),
-                (Right(n1), Right(n2)) => Ok(Self::from_integer(n1 + n2, gc)),
+                (Left(n1), Left(n2)) => Ok(Self::alloc_from(n1 + n2, gc)),
+                (Left(n1), Right(n2)) => Ok(Self::alloc_from(Integer::from(n1) + n2, gc)),
+                (Right(n1), Left(n2)) => Ok(Self::alloc_from(n1 + Integer::from(n2), gc)),
+                (Right(n1), Right(n2)) => Ok(Self::alloc_from(n1 + n2, gc)),
             }
         } else {
             let x1 = self.number_to_f64().ok_or(TypeError)?;
             let x2 = other.number_to_f64().ok_or(TypeError)?;
-            Ok(Self::from_f64(x1 + x2, gc))
+            Ok(Self::alloc_from(x1 + x2, gc))
         }
     }
 
     pub fn subtract(self, other: Value, gc: &mut GarbageCollector) -> Result<Value, TypeError> {
         if let (Some(n1), Some(n2)) = (self.as_int(), other.as_int()) {
             match (n1, n2) {
-                (Left(n1), Left(n2)) => Ok(Self::from_isize(n1 - n2, gc)),
-                (Left(n1), Right(n2)) => Ok(Self::from_integer(Integer::from(n1) - n2, gc)),
-                (Right(n1), Left(n2)) => Ok(Self::from_integer(n1 - Integer::from(n2), gc)),
-                (Right(n1), Right(n2)) => Ok(Self::from_integer(n1 - n2, gc)),
+                (Left(n1), Left(n2)) => Ok(Self::alloc_from(n1 - n2, gc)),
+                (Left(n1), Right(n2)) => Ok(Self::alloc_from(Integer::from(n1) - n2, gc)),
+                (Right(n1), Left(n2)) => Ok(Self::alloc_from(n1 - Integer::from(n2), gc)),
+                (Right(n1), Right(n2)) => Ok(Self::alloc_from(n1 - n2, gc)),
             }
         } else {
             let x1 = self.number_to_f64().ok_or(TypeError)?;
             let x2 = other.number_to_f64().ok_or(TypeError)?;
-            Ok(Self::from_f64(x1 - x2, gc))
+            Ok(Self::alloc_from(x1 - x2, gc))
         }
     }
 
@@ -383,22 +355,22 @@ impl Value {
             match (n1, n2) {
                 (Left(n1), Left(n2)) => {
                     if let Some(product) = n1.checked_mul(n2) {
-                        Ok(Self::from_isize(product, gc))
+                        Ok(Self::alloc_from(product, gc))
                     } else {
-                        Ok(Self::from_integer(
+                        Ok(Self::alloc_from(
                             Integer::from(n1) * Integer::from(n2),
                             gc,
                         ))
                     }
                 }
-                (Left(n1), Right(n2)) => Ok(Self::from_integer(Integer::from(n1) * n2, gc)),
-                (Right(n1), Left(n2)) => Ok(Self::from_integer(n1 * Integer::from(n2), gc)),
-                (Right(n1), Right(n2)) => Ok(Self::from_integer(n1 * n2, gc)),
+                (Left(n1), Right(n2)) => Ok(Self::alloc_from(Integer::from(n1) * n2, gc)),
+                (Right(n1), Left(n2)) => Ok(Self::alloc_from(n1 * Integer::from(n2), gc)),
+                (Right(n1), Right(n2)) => Ok(Self::alloc_from(n1 * n2, gc)),
             }
         } else {
             let x1 = self.number_to_f64().ok_or(TypeError)?;
             let x2 = other.number_to_f64().ok_or(TypeError)?;
-            Ok(Self::from_f64(x1 * x2, gc))
+            Ok(Self::alloc_from(x1 * x2, gc))
         }
     }
 
@@ -413,22 +385,22 @@ impl Value {
                 (_, Right(zero)) if *zero == Integer::ZERO => Ok(None),
                 (Left(n1), Left(n2)) => {
                     if let Some(quot) = n1.checked_div(n2) {
-                        Ok(Some(Self::from_isize(quot, gc)))
+                        Ok(Some(Self::alloc_from(quot, gc)))
                     } else {
-                        Ok(Some(Self::from_integer(
+                        Ok(Some(Self::alloc_from(
                             Integer::from(n1) / Integer::from(n2),
                             gc,
                         )))
                     }
                 }
-                (Left(n1), Right(n2)) => Ok(Some(Self::from_integer(Integer::from(n1) / n2, gc))),
-                (Right(n1), Left(n2)) => Ok(Some(Self::from_integer(n1 / Integer::from(n2), gc))),
-                (Right(n1), Right(n2)) => Ok(Some(Self::from_integer(n1 / n2, gc))),
+                (Left(n1), Right(n2)) => Ok(Some(Self::alloc_from(Integer::from(n1) / n2, gc))),
+                (Right(n1), Left(n2)) => Ok(Some(Self::alloc_from(n1 / Integer::from(n2), gc))),
+                (Right(n1), Right(n2)) => Ok(Some(Self::alloc_from(n1 / n2, gc))),
             }
         } else {
             let x1 = self.number_to_f64().ok_or(TypeError)?;
             let x2 = other.number_to_f64().ok_or(TypeError)?;
-            Ok(Some(Self::from_f64(x1 / x2, gc)))
+            Ok(Some(Self::alloc_from(x1 / x2, gc)))
         }
     }
 
@@ -443,22 +415,22 @@ impl Value {
                 (_, Right(zero)) if *zero == Integer::ZERO => Ok(None),
                 (Left(n1), Left(n2)) => {
                     if let Some(rem) = n1.checked_rem(n2) {
-                        Ok(Some(Self::from_isize(rem, gc)))
+                        Ok(Some(Self::alloc_from(rem, gc)))
                     } else {
-                        Ok(Some(Self::from_integer(
+                        Ok(Some(Self::alloc_from(
                             Integer::from(n1) % Integer::from(n2),
                             gc,
                         )))
                     }
                 }
-                (Left(n1), Right(n2)) => Ok(Some(Self::from_integer(Integer::from(n1) % n2, gc))),
-                (Right(n1), Left(n2)) => Ok(Some(Self::from_integer(n1 % Integer::from(n2), gc))),
-                (Right(n1), Right(n2)) => Ok(Some(Self::from_integer(n1 % n2, gc))),
+                (Left(n1), Right(n2)) => Ok(Some(Self::alloc_from(Integer::from(n1) % n2, gc))),
+                (Right(n1), Left(n2)) => Ok(Some(Self::alloc_from(n1 % Integer::from(n2), gc))),
+                (Right(n1), Right(n2)) => Ok(Some(Self::alloc_from(n1 % n2, gc))),
             }
         } else {
             let x1 = self.number_to_f64().ok_or(TypeError)?;
             let x2 = other.number_to_f64().ok_or(TypeError)?;
-            Ok(Some(Self::from_f64(x1 % x2, gc)))
+            Ok(Some(Self::alloc_from(x1 % x2, gc)))
         }
     }
 
@@ -466,12 +438,12 @@ impl Value {
         if let Some(n) = self.as_int() {
             match n {
                 // Overflow can't happen, n won't be isize::MIN.
-                Left(n) => Ok(Self::from_isize(-n, gc)),
-                Right(n) => Ok(Self::from_integer(-n, gc)),
+                Left(n) => Ok(Self::alloc_from(-n, gc)),
+                Right(n) => Ok(Self::alloc_from(-n, gc)),
             }
         } else {
             let x = self.as_f64().ok_or(TypeError)?;
-            Ok(Self::from_f64(-x, gc))
+            Ok(Self::alloc_from(-x, gc))
         }
     }
 
@@ -715,6 +687,49 @@ impl From<CaptureRef> for Value {
                 .map_addr(|addr| (addr | Self::CAPTURE_TAG))
                 .cast::<u8>(),
         )
+    }
+}
+pub trait AllocIntoValue {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value;
+}
+
+impl AllocIntoValue for isize {
+     fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        if let Some(result) = Value::from_small_int(self) {
+            result
+        } else {
+            Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
+        }
+    }
+}
+
+impl AllocIntoValue for usize {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        if let Ok(n) = isize::try_from(self)
+            && let Some(result) = Value::from_small_int(n)
+        {
+            result
+        } else {
+            Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
+        }
+    }
+}
+
+impl AllocIntoValue for Integer {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        if let Ok(n) = isize::try_from(&self)
+            && let Some(result) = Value::from_small_int(n)
+        {
+            result
+        } else {
+            Value::from(BigIntRef::new_unchecked(self, gc))
+        }
+    }
+}
+
+impl AllocIntoValue for f64 {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        Value::from(FloatRef::new(self, gc))
     }
 }
 

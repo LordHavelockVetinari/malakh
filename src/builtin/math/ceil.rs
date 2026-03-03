@@ -23,7 +23,7 @@ impl Function for Ceil {
                 todo!("Ceil input is not finite")
             }
             let (n, _) = Integer::rounding_from(x, RoundingMode::Ceiling);
-            Action::Output(Value::from_integer(n, vm.gc_mut()))
+            Action::Output(Value::alloc_from(n, vm.gc_mut()))
         } else if input.is_int() {
             Action::Output(input)
         } else {

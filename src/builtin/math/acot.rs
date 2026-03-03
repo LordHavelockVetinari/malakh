@@ -17,6 +17,6 @@ impl Function for Acot {
         let Some(x) = input.number_to_f64() else {
             todo!("type error");
         };
-        Action::Output(Value::from_f64(x.recip().atan(), vm.gc_mut()))
+        Action::Output(Value::alloc_from(x.recip().atan(), vm.gc_mut()))
     }
 }

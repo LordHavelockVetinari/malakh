@@ -29,7 +29,7 @@ impl Function for Log {
                 consts::E => x.ln(),
                 _ => x.log(base),
             };
-            Action::Output(Value::from_f64(result, vm.gc_mut()))
+            Action::Output(Value::alloc_from(result, vm.gc_mut()))
         } else {
             self.arg1 = Some(x);
             Action::OptionalInput
@@ -38,6 +38,6 @@ impl Function for Log {
 
     fn no_input(&mut self, vm: &mut Vm) -> Action {
         let x = self.arg1.expect("arg1 should be initialized");
-        Action::Output(Value::from_f64(x.ln(), vm.gc_mut()))
+        Action::Output(Value::alloc_from(x.ln(), vm.gc_mut()))
     }
 }

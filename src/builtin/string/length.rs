@@ -17,7 +17,7 @@ impl BasicFunction for Length {
         let Some(s) = input.as_string_ref() else {
             todo!("String::Length did not get a string");
         };
-        let len = Value::from_usize(s.bytes().len(), vm.gc_mut());
+        let len = Value::alloc_from(s.bytes().len(), vm.gc_mut());
         BasicFunctionResult::Output(len)
     }
 }

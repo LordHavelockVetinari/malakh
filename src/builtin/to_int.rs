@@ -39,7 +39,7 @@ impl BasicFunction for ToInt {
                 return Stop;
             }
             let (n, _) = Integer::rounding_from(x, RoundingMode::Down);
-            return Output(Value::from_integer(n, vm.gc_mut()));
+            return Output(Value::alloc_from(n, vm.gc_mut()));
         }
         let Some(s) = input.as_string_ref() else {
             todo!("ToInt got bad argument");
@@ -48,6 +48,6 @@ impl BasicFunction for ToInt {
         let Some(n) = str::from_utf8(bytes).ok().and_then(string_to_int) else {
             return Stop;
         };
-        Output(Value::from_integer(n, vm.gc_mut()))
+        Output(Value::alloc_from(n, vm.gc_mut()))
     }
 }

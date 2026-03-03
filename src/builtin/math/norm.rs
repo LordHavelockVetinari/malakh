@@ -16,7 +16,7 @@ impl helper::BasicAggregator for Norm {
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
     fn get(&mut self, vm: &mut Vm) -> Option<Value> {
-        Some(Value::from_f64(self.sum.sqrt(), vm.gc_mut()))
+        Some(Value::alloc_from(self.sum.sqrt(), vm.gc_mut()))
     }
 
     fn put(&mut self, value: Value, _vm: &mut Vm) {

@@ -23,7 +23,7 @@ impl helper::BasicAggregator for Mean {
         if self.count == 0.0 {
             return None;
         }
-        Some(Value::from_f64(self.sum / self.count, vm.gc_mut()))
+        Some(Value::alloc_from(self.sum / self.count, vm.gc_mut()))
     }
 
     fn put(&mut self, value: Value, _vm: &mut Vm) {

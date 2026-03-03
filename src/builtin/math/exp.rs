@@ -17,6 +17,6 @@ impl Function for Exp {
         let Some(x) = input.number_to_f64() else {
             todo!("type error");
         };
-        Action::Output(Value::from_f64(x.exp(), vm.gc_mut()))
+        Action::Output(Value::alloc_from(x.exp(), vm.gc_mut()))
     }
 }
