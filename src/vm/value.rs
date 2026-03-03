@@ -357,10 +357,7 @@ impl Value {
                     if let Some(product) = n1.checked_mul(n2) {
                         Ok(Self::alloc_from(product, gc))
                     } else {
-                        Ok(Self::alloc_from(
-                            Integer::from(n1) * Integer::from(n2),
-                            gc,
-                        ))
+                        Ok(Self::alloc_from(Integer::from(n1) * Integer::from(n2), gc))
                     }
                 }
                 (Left(n1), Right(n2)) => Ok(Self::alloc_from(Integer::from(n1) * n2, gc)),
@@ -694,7 +691,7 @@ pub trait AllocIntoValue {
 }
 
 impl AllocIntoValue for isize {
-     fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
         if let Some(result) = Value::from_small_int(self) {
             result
         } else {

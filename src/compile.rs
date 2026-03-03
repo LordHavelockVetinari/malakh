@@ -23,7 +23,7 @@ use crate::parse::location::Location;
 use crate::parse::tree::{
     Argument, ArgumentType, Assignment, AssignmentType, BinaryOperator, CodeFile, CodeVisitor,
     Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, JumpType, RaiseType, Stmt,
-    StmtType, UnaryOperator,
+    StmtType, TryBlock, UnaryOperator,
 };
 use crate::vm::builder::VmBuilder;
 use crate::vm::macros::{code, instruction};
@@ -645,6 +645,71 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_try(
+        &mut self,
+        try_block: &TryBlock,
+        builder: &mut ProcessFamilyBuilder,
+    ) -> Result<(), CompilationError> {
+        let TryBlock { body, cases } = try_block;
+        builder.begin_try_body();
+        self.compile_block(body, builder)?;
+        let mut out_jumps = Vec::new();
+        out_jumps.push(builder.add_jump(instruction! {
+            JUMP 0, 0;
+        }));
+        builder.end_try_body();
+        let err_reg = builder.register_allocator_mut().alloc(&cases[0].location)?;
+        self.compile_move(err_reg, 0, builder);
+        for (i, case) in cases.iter().enumerate() {
+            let mut skip_jump = None;
+            if let Some(values) = &case.values {
+                let mut enter_jumps = Vec::new();
+                for (i, value) in values.iter().enumerate() {
+                    let value_reg = self.compile_expr(value, RegisterChoice::Any, builder)?;
+                    let bool_reg = builder.register_allocator_mut().alloc_temporary(&value.1)?;
+                    value_reg.dealloc(builder.register_allocator_mut());
+                    builder.register_allocator_mut().dealloc(bool_reg);
+                    builder.add_code(code! {
+                        ERROR_MATCHES bool_reg, err_reg, value_reg.index;
+                    });
+                    if i == values.len() - 1 {
+                        skip_jump = Some(builder.add_jump(instruction! {
+                            JUMP_UNLESS bool_reg, 0;
+                        }))
+                    } else {
+                        enter_jumps.push(builder.add_jump(instruction! {
+                            JUMP_IF bool_reg, 0;
+                        }));
+                    }
+                }
+                for jump in enter_jumps {
+                    builder.link_jump_here(jump, &case.location)?;
+                }
+            }
+            self.compile_block(&case.body, builder)?;
+            if case.values.is_some() {
+                out_jumps.push(builder.add_jump(instruction! {
+                    JUMP 0, 0;
+                }));
+            } else {
+                assert_eq!(i, cases.len() - 1);
+            }
+            if let Some(skip_jump) = skip_jump {
+                builder.link_jump_here(skip_jump, &case.location)?;
+            }
+        }
+        if cases.last().unwrap().values.is_some() {
+            builder.add_code(code! {
+                RETHROW err_reg, 0, 0;
+            });
+        }
+        builder.register_allocator_mut().dealloc(err_reg);
+        for out_jump in out_jumps {
+            builder.link_jump_here(out_jump, &try_block.cases[0].location)?;
+        }
+        Ok(())
+    }
+
     fn compile_stmt(
         &mut self,
         stmt: &Rc<Stmt>,
@@ -754,9 +819,17 @@ impl Compiler {
                 })?;
                 builder.register_allocator_mut().dealloc(error_reg);
                 match raise_type {
-                    RaiseType::Err => builder.add_code(code! {
-                        ERR error_reg, 0, 0;
-                    }),
+                    RaiseType::Err => {
+                        if builder.is_in_try() {
+                            return CompilationError::err(
+                                "`err` is not allowed inside `try` body (use `throw` instead)",
+                                &stmt.1,
+                            );
+                        }
+                        builder.add_code(code! {
+                            ERR error_reg, 0, 0;
+                        });
+                    }
                     RaiseType::Throw => builder.add_code(code! {
                         THROW error_reg, 0, 0;
                     }),
@@ -819,7 +892,7 @@ impl Compiler {
                 }
                 Ok(())
             }
-            StmtType::Try(_, _) => todo!(),
+            StmtType::Try(try_block) => self.compile_try(try_block, builder),
         }
     }
 

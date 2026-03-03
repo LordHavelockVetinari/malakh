@@ -9,9 +9,16 @@ use super::gc::GcInfo;
 use super::{Instruction, Value};
 
 #[derive(Debug)]
+pub struct TryBody {
+    pub start: *const Instruction,
+    pub end: *const Instruction,
+}
+
+#[derive(Debug)]
 pub struct UserProcessFamily {
     pub code: &'static [Instruction],
     pub memory_len: usize,
+    pub try_bodies: &'static [TryBody],
 }
 
 // A process consists of a process header followed by one or more Values,
@@ -27,6 +34,12 @@ pub struct UserProcessHeader {
 }
 
 const _: () = assert!(size_of::<UserProcessHeader>() % size_of::<Value>() == 0);
+
+impl TryBody {
+    pub fn contains(&self, instruction: *const Instruction) -> bool {
+        (self.start..self.end).contains(&instruction)
+    }
+}
 
 impl UserProcessFamily {
     fn layout(&self) -> Layout {

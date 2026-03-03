@@ -96,6 +96,14 @@ impl VmBuilder {
             UNREACHABLE 0, 0, 0;
         }
         .as_ptr();
+        for family in &self.0.process_families {
+            assert!(
+                family
+                    .try_bodies
+                    .iter()
+                    .is_sorted_by_key(|body| body.end.addr() - body.start.addr())
+            );
+        }
         Vm {
             constants: self.0.constants,
             user_process_families: self.0.process_families,

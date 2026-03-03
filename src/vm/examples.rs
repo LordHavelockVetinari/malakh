@@ -23,6 +23,7 @@ pub fn example1() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 3,
+        try_bodies: &[],
     });
     builder.build()
 }
@@ -46,6 +47,7 @@ pub fn example2() -> Vm {
             STOP 0, 0, 0;
         },
         memory_len: 2,
+        try_bodies: &[],
     });
     builder.process_family(UserProcessFamily {
         code: const_code! {
@@ -56,6 +58,7 @@ pub fn example2() -> Vm {
             STOP 0, 0, 0;
         },
         memory_len: 3,
+        try_bodies: &[],
     });
     builder.initial_process_family(UserProcessFamily {
         code: const_code! {
@@ -63,6 +66,7 @@ pub fn example2() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 1,
+        try_bodies: &[],
     });
     builder.build()
 }
@@ -81,6 +85,7 @@ pub fn example_fibonacci() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 2,
+        try_bodies: &[],
     });
     builder.process_family(UserProcessFamily {
         code: const_code! {
@@ -94,6 +99,7 @@ pub fn example_fibonacci() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 3,
+        try_bodies: &[],
     });
     builder.build()
 }
@@ -115,6 +121,7 @@ pub fn example_countdown() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 2,
+        try_bodies: &[],
     });
     builder.build()
 }
@@ -139,6 +146,7 @@ pub fn example_sum() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 2,
+        try_bodies: &[],
     });
     builder.process_family(UserProcessFamily {
         code: const_code! {
@@ -151,6 +159,7 @@ pub fn example_sum() -> Vm {
             STOP 0, 0, 0;
         },
         memory_len: 10,
+        try_bodies: &[],
     });
     builder.build()
 }
@@ -184,6 +193,7 @@ pub fn example_stack() -> Vm {
             JUMP 0, !9;
         },
         memory_len: 4,
+        try_bodies: &[],
     });
     builder.initial_process_family(UserProcessFamily {
         code: const_code! {
@@ -215,6 +225,7 @@ pub fn example_stack() -> Vm {
             EXIT 0, 0, 0;
         },
         memory_len: 2,
+        try_bodies: &[],
     });
     builder.build()
 }

@@ -1,0 +1,103 @@
+Divide -> {
+    a, b := in
+    if not [IsNumber a] or not [IsNumber b] {
+        throw .TypeError
+    }
+    if b == 0 {
+        throw .MathError
+    }
+    out (a / b)
+}
+
+DivideOrZero -> {
+    a, b := in
+    try {
+        out [Divide a b]
+    
+    case .MathError:
+        out 0
+
+    }
+}
+
+Main -> {
+    try {
+        Divide 1 2
+        out "1st"
+    
+    default:
+        out "error 1"
+
+    }
+
+    try {
+        Divide 1 0
+        out "error 2"
+    
+    case .TypeError:
+        out "error 3"
+    
+    case .MathError:
+        out "2nd"
+
+    }
+
+    try {
+        Divide 1 2 3
+    
+    case .TypeError, .MathError:
+        out "error 4"
+    
+    default:
+        out "3rd"
+
+    }
+
+    try {
+        out [Cat [DivideOrZero 36 9] "th"]
+    
+    default:
+        out "error 5"
+
+    }
+
+    zero := [DivideOrZero 30 0]
+    try {
+        Divide 10 zero
+    
+    case .FooError, .MathError, User "error 6":
+        out "5th"
+
+    case User "error 7":
+        out "error 8"
+
+    }
+
+    try {
+        DivideOrZero "a" 0
+        out "error 9"
+    
+    case .MathError:
+        out "error 10"
+    
+    case .TypeError:
+        out "6th"
+
+    }
+
+    n := 1
+    p := { in }
+    try {
+        throw p
+    
+    case n:
+        out "error 11"
+    
+    case p .Spam:
+        out "7th"
+
+    }
+    if n != 1 {
+        out "error 12"
+    }
+}

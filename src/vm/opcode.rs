@@ -96,7 +96,9 @@ opcodes! {
     THROW (3) = 93;
     RECEIVE_ERR (3) = 94;
     PEEK_ERR (3) = 96;
-    PROPAGATE (3) = 97;
+    RETHROW (3) = 97;
+    PROPAGATE (3) = 98;
+    ERROR_MATCHES (3) = 99;
     DEBUG (3) = 100;
     EXIT (3) = 101;
     DISPLAY_ERROR (3) = 102;
@@ -761,6 +763,15 @@ fn run_peek_err(vm: &mut Vm, inst: Instruction) {
     *vm.register_mut(dst) = proc.output_slot();
 }
 
+fn run_rethrow(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), RETHROW);
+    let (src, _, _) = inst.as_three_operand();
+    let src = vm.register(src);
+    let cause = unsafe { ErrorRef::from_value(src, vm) };
+    let error = ErrorRef::new_propagated(vm, cause);
+    vm.throw_from_current_process(error);
+}
+
 fn run_propagate(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), PROPAGATE);
     let (src, _, _) = inst.as_three_operand();
@@ -770,6 +781,16 @@ fn run_propagate(vm: &mut Vm, inst: Instruction) {
     {
         vm.propagate_error(proc);
     }
+}
+
+fn run_error_matches(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), ERROR_MATCHES);
+    let (dst, error_src, value_src) = inst.as_three_operand();
+    let error_src = vm.register(error_src);
+    let value_src = vm.register(value_src);
+    let error = unsafe { ErrorRef::from_value(error_src, vm) };
+    let result = error.values().contains(&value_src);
+    *vm.register_mut(dst) = Value::from(result);
 }
 
 fn run_debug(vm: &mut Vm, inst: Instruction) {
@@ -856,7 +877,9 @@ static OPCODE_TABLE: [InstructionFn; 256] = {
     table[THROW as usize] = run_throw;
     table[RECEIVE_ERR as usize] = run_receive_err;
     table[PEEK_ERR as usize] = run_peek_err;
+    table[RETHROW as usize] = run_rethrow;
     table[PROPAGATE as usize] = run_propagate;
+    table[ERROR_MATCHES as usize] = run_error_matches;
     table[DEBUG as usize] = run_debug;
     table[EXIT as usize] = run_exit;
     table[DISPLAY_ERROR as usize] = run_display_error;

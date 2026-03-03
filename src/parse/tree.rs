@@ -96,10 +96,9 @@ pub enum RaiseType {
 }
 
 #[derive(Debug)]
-pub struct CatchClause {
-    pub values: Option<Vec<Rc<Expr>>>,
+pub struct TryBlock {
     pub body: Vec<Rc<Stmt>>,
-    pub location: Location,
+    pub cases: Vec<SwitchCase>,
 }
 
 #[derive(Debug)]
@@ -115,7 +114,7 @@ pub enum StmtType {
     If(Condition, Vec<Rc<Stmt>>, Vec<Rc<Stmt>>),
     Switch(Rc<Expr>, Vec<SwitchCase>),
     Loop(Option<Condition>, Vec<Rc<Stmt>>),
-    Try(Vec<Rc<Stmt>>, Vec<CatchClause>),
+    Try(TryBlock),
 }
 
 #[derive(Debug)]
@@ -449,17 +448,17 @@ pub trait DefaultCodeVisitor: Sized {
     }
 
     fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
-        let Stmt(StmtType::Try(code, catches), _) = &**stmt else {
+        let Stmt(StmtType::Try(TryBlock { body, cases }), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for stmt in code {
+        for stmt in body {
             self.visit(stmt)?;
         }
-        for catch in catches {
-            for val in catch.values.iter().flatten() {
+        for case in cases {
+            for val in case.values.iter().flatten() {
                 self.visit(val);
             }
-            for stmt in &catch.body {
+            for stmt in &case.body {
                 self.visit(stmt);
             }
         }

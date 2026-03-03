@@ -128,8 +128,18 @@ impl Vm {
         let mut proc = self.current_process();
         *proc.output_slot_mut() = Value::from(error);
         debug_assert!(!proc.take_can_resume());
-        *proc.state_mut() = ProcessState::Err;
-        self.pause_user_process();
+        let catch_address = proc
+            .family()
+            .try_bodies
+            .iter()
+            .find(|try_body| try_body.contains(self.instruction_pointer()))
+            .map(|try_body| try_body.end);
+        if let Some(catch_address) = catch_address {
+            self.jump_absolute(catch_address);
+        } else {
+            *proc.state_mut() = ProcessState::Err;
+            self.pause_user_process();
+        }
     }
 
     fn _propagate_error_inner(&mut self, original_process: AnyProcessRef) {
@@ -173,9 +183,13 @@ impl Vm {
         unsafe { (proc.family().enter)(proc, self, input) }
     }
 
-    pub fn jump(&mut self, offset: isize) {
-        self.instruction_pointer = unsafe { self.instruction_pointer.offset(offset) };
+    pub fn jump_absolute(&mut self, target: *const Instruction) {
+        self.instruction_pointer = target;
         self.maybe_collect_garbage();
+    }
+
+    pub fn jump(&mut self, offset: isize) {
+        self.jump_absolute(unsafe { self.instruction_pointer.offset(offset) });
     }
 
     pub fn step(&mut self) {

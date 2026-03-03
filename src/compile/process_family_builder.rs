@@ -5,12 +5,17 @@ use crate::compile::error::CompilationError;
 use crate::compile::register_allocator::RegisterAllocator;
 use crate::parse::location::Location;
 use crate::vm::Instruction;
-use crate::vm::user_process::UserProcessFamily;
+use crate::vm::user_process::{TryBody, UserProcessFamily};
 
 struct LoopContext {
     location: Location,
     break_jump_addresses: Vec<usize>,
     continue_jump_target: usize,
+}
+
+pub struct TryBuilder {
+    pub start: usize,
+    pub end: usize,
 }
 
 pub struct ProcessFamilyBuilder {
@@ -19,6 +24,8 @@ pub struct ProcessFamilyBuilder {
     environment: ProcessEnvironment,
     num_unlinked_jumps: usize,
     loops: Vec<LoopContext>,
+    try_starts: Vec<usize>,
+    try_builders: Vec<TryBuilder>,
 }
 
 impl ProcessFamilyBuilder {
@@ -29,6 +36,8 @@ impl ProcessFamilyBuilder {
             environment: ProcessEnvironment::new(),
             num_unlinked_jumps: 0,
             loops: Vec::new(),
+            try_starts: Vec::new(),
+            try_builders: Vec::new(),
         };
         this.enter_new_scope();
         this
@@ -140,6 +149,22 @@ impl ProcessFamilyBuilder {
         self.link_jump_absolute(index, here, location)
     }
 
+    pub fn is_in_try(&self) -> bool {
+        !self.try_starts.is_empty()
+    }
+
+    pub fn begin_try_body(&mut self) {
+        self.try_starts.push(self.next_instruction_index());
+    }
+
+    pub fn end_try_body(&mut self) {
+        let start = self.try_starts.pop().expect("should be in try statement");
+        self.try_builders.push(TryBuilder {
+            start,
+            end: self.next_instruction_index(),
+        });
+    }
+
     pub fn build(&mut self) -> UserProcessFamily {
         self.exit_scope();
         assert!(
@@ -148,9 +173,22 @@ impl ProcessFamilyBuilder {
         );
         assert_eq!(self.num_unlinked_jumps, 0, "forgot to link all jumps");
         assert!(self.loops.is_empty(), "forgot to exit some loops");
+        assert!(self.try_starts.is_empty(), "forgot to exit some try bodies");
+        let code = mem::take(&mut self.code).leak();
+        let try_bodies = self
+            .try_builders
+            .iter()
+            .map(|builder| TryBody {
+                start: &code[builder.start],
+                end: &code[builder.end],
+            })
+            .collect::<Vec<_>>()
+            .leak();
+        try_bodies.sort_unstable_by_key(|body| body.end.addr() - body.start.addr());
         UserProcessFamily {
-            code: mem::take(&mut self.code).leak(),
+            code,
             memory_len: self.register_allocator.required_num_registers(),
+            try_bodies,
         }
     }
 }
