@@ -2692,8 +2692,10 @@ The statement `out in...` makes the process read inputs,
 and immediately output each input it reads.
 This is not very useful, but it works.
 
+`...` can also appear after `err` or `throw`, with a similar meaning.
+
 **In summary:** `...` can appear either inside a *send* expression or inside
-an `out` statement.
+an `out`, `err` or `throw` statement.
 It follows either a *receive* expression or an `in` expression.
 In all cases, the `...` operator repeatedly reads values, as many as
 possible, and sends or outputs each one.

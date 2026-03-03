@@ -105,8 +105,15 @@ impl ErrorRef {
         for (i, part) in parts.iter().rev().enumerate() {
             if i == 0 {
                 write!(output, "error:")?;
-                for value in part.values() {
-                    write!(output, " {:?}", value)?;
+                if let [value] = part.values()
+                    && value.is_string()
+                {
+                    write!(output, " ")?;
+                    value.write_to(output)?;
+                } else {
+                    for value in part.values() {
+                        write!(output, " {:?}", value)?;
+                    }
                 }
                 writeln!(output)?;
                 write!(output, "    thrown at:   ")?;

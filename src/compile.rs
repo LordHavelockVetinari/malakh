@@ -806,6 +806,20 @@ impl Compiler {
                 Ok(())
             }),
             StmtType::Raise(raise_type, args) => {
+                if args.is_empty() {
+                    let stmt_type = match raise_type {
+                        RaiseType::Err => "err",
+                        RaiseType::Throw => "throw",
+                    };
+                    return CompilationError::err(
+                        format!(
+                            "`{0}` statement has no error values \
+                            (to raise an empty set of values, use: `{0} [{{}}]...`)",
+                            stmt_type
+                        ),
+                        &stmt.1,
+                    );
+                }
                 let error_reg = builder.register_allocator_mut().alloc_temporary(&stmt.1)?;
                 let approx_size = u32::try_from(args.len()).unwrap_or(u32::MAX);
                 builder.add_code(code! {
