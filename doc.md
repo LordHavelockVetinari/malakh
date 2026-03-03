@@ -2141,6 +2141,7 @@ The output of `Process::State` will be one of the following:
     and is waiting for input.
     When it gets input, it will create a child process,
     but stay in the `.ForkIn` state.
+- `.Err`: the process has encountered an error.
 
 For example:
 
@@ -2151,6 +2152,7 @@ For example:
         Assert ([Process::State Math::Sin] == .In)
         Assert ([Process::State Sum] == .OptIn)
         Assert ([Process::State List] == .ForkIn)
+        Assert ([Process::State {1 / 0}] == .Err)
     }
 
 Control Flow
@@ -2162,8 +2164,8 @@ Usually you don't need to think about these rules, as the behavior of
 processes tends to be very intuitive, but there are some edge-cases where this
 is important.
 
-As you already saw, at any given moment, each process can be in one of six
-states: `.Run`, `.Stop`, `.Out`, `.In`, `.OptIn`, `.ForkIn`.
+As you already saw, at any given moment, each process can be in one of seven
+states: `.Run`, `.Stop`, `.Out`, `.In`, `.OptIn`, `.ForkIn`, `.Err`.
 The program has a special stack data structure called
 the *process stack*, which holds all the processes that are in the
 `.Run` state.
@@ -2195,6 +2197,7 @@ The following rules describe the transitions between states:
   - If it executes an `in` expression, its state will change to `.In`,
     or `.OptIn` if it is an optional input.
   - If it executes a `fork in` expression, its state will change to `.ForkIn`.
+  - If an error occurs, its state will change to `.Err`.
   - If it reaches the end of its code, or executes a `stop` statement,
     its state will change to `.Stop`.
   
@@ -2224,6 +2227,14 @@ The following rules describe the transitions between states:
   The child process will start in the `.Run` state, and get pushed
   to the top of the stack. \
   TODO: maybe a `finally` statement may cause a parent to change its state.
+- The `.Err` state is very similar to `.Out`:
+  each process has an *error slot*, where it holds errors.
+  Whenever a process encountered an error, its state changes to `.Err`,
+  and information about the error gets stored in the error slot.
+  The process will remain in the `.Err` state until another process receives
+  the error, at which point it resumes running.\
+  We will discuss the `.Err` state in more detail in the section about
+  error handling.
 
 **Send Expressions:** when a process `p1` executes a *send* expression:
 `p2 x`, the process `p2` must be in one of the state `.In`, `.OptIn`,
@@ -2249,10 +2260,242 @@ acts just like a regular receive expression, except that whenever the process
 that executes it would crash because `p2` is in the wrong state,
 it doesn't crash, but runs some alternative code, as defined in the program.
 
-Error Handling
---------------
+Err Statement
+-------------
 
-TODO
+Until now, in all the programs we've written, we assumed that everything goes
+according to plan:
+processes always get the input they were expecting,
+division by zero never occurs, assertions always succeed, and so on.
+But Malakh has ways of dealing with these situations too, using the
+`err`, `throw` and `try` statements.
+
+The simplest of these tools is the `err` statement.
+An `err` statement looks very much like an `out` statement, for example:
+
+    err .IoError "file foo.txt not found"
+    err 1 2 3 4 5
+
+When a process executes an `err` statement, it takes the sequence of values
+after `err`, and places them together in its *error slot*
+(each process has an error slot, analogous to the output slot, for this
+purpose). Then its state changes to `.Err`, and it waits until
+another process receives the error.
+
+An `err` statement is almost identical to `out`, with two main differences:
+- An `err` statement outputs a sequence of values together, and not one at a
+  time. For example, this statement:
+    
+      err .Foo .Bar
+    
+  outputs the sequence `.Foo .Bar`, and is different from the following
+  statements:
+
+      err .Foo
+      err .Bar
+
+  which output two separate errors.
+
+- An `err` statement outputs an error, not a regular output.
+  You can't receive an error with a *receive* expression.
+
+The values after `err` are called *error values*.
+Usually, error values are either:
+
+- Strings describing the error, called *error messages*.
+- Symbols describing the general category of the error, called *error tags*.
+
+For example, this error: `err .IoError "file foo.txt not found"`
+has one error message and one tag.
+
+If an `err` statement appears in `Main`, the error values get output to the
+user (like with `out`), but in a different format, marking it as an error.
+
+Throw Statement
+---------------
+
+When an error occurs, you'll usually want to stop the process
+immediately after raising the error, for example:
+
+    Divide -> {
+        a, b := in
+        if b == 0 {
+            err .MathError "division by zero"
+            // No sense in continuing if b = 0.
+            stop
+        }
+        out (a / b)
+    }
+
+This pattern is in fact so common that there's special syntax for it:
+
+    Divide -> {
+        a, b := in
+        if b == 0 {
+            throw .MathError "division by zero"
+        }
+        out (a / b)
+    }
+
+As you can see, a `throw` statement is exactly like `err`, except that it
+also stops the process.
+
+Error Propagation
+-----------------
+
+When a process sees another process raise an error, it may throw the same
+error too, "out of sympathy".
+This is called *error propagation*, and it ensures that execution won't
+continue if a dangerous error has occured.
+
+Specifically, if process `p` performs some operation on process `q` , whose
+state is `.Err`, `p` may enter the `.Err` state too, with the same error as
+`q`. After another process receives `p`'s error, `p` will stop.
+
+Operations that cause error propagation are:
+
+- An attempt to receive from process `q`.
+- An attempt to send input to process `q`.
+- A statement that contains only the name of a variable or a constructor
+  and nothing else. For example, in the following program:
+
+      Foo -> {
+        Bar
+      }
+    
+  `Foo` will throw an error if `Bar` is a process in the `.Err` state.
+- A statement that contains only a send expression. For example, in the
+  following program:
+
+      Foo -> {
+          Bar Baz
+      }
+
+  `Foo` will throw an error if `Bar` was in the `.Err` state before the send,
+  or if `Bar` enters the `.Err` state after getting its input.
+  On the other hand, it will *not* throw an error if `Baz` is a process in the
+  `.Err` state.
+- Any of the above, enclosed in parentheses.
+
+**Example:**
+
+    Thrower -> {
+        throw "oh no"
+    }
+
+    Thrower2 -> {
+        // Throw "oh no".
+        Thrower
+    }
+
+    DelayedThrower -> {
+        in
+        // Throw "oh no" after getting input.
+        Thrower2
+    }
+
+    Thrower3 -> {
+        // This does nothing:
+        DelayedThrower
+        // This does nothing:
+        _example1 := Thrower
+        // This does nothing:
+        _example2 := DelayedThrower .Spam
+        // But this throws an error:
+        DelayedThrower .Spam
+    }
+
+    Thrower4 -> {
+        // Receiving from a process in the `.Err` state causes an error,
+        // even if the receive expression is optional.
+        x := [Thrower]
+        else {}
+    }
+
+**Some notes:**
+
+- Suppose that `p` propagates `q`'s error.
+  Even if originally, `q` ran an `err` statement, so it's able to recover from
+  the error, `p` will always *throw* the error, so it can't recover.
+- `p` does not *receive* `q`'s error, it only peeks into its *error slot*
+  without emptying it. So `q` stays in the `.Err` state.
+
+Try Statement
+-------------
+
+A `try` statement is a way to "catch" errors, and continue running
+after an error was thrown.
+
+A `try` statement looks very much like a `switch` statement:
+
+    Main -> {
+        try {
+            DangerousOperation
+            out "operation successful"
+        
+        case .ErrorTag1:
+            out "operation failed due to reason 1"
+        
+        case .ErrorTag2, .ErrorTag3:
+            out "operation failed due to reason 2 or 3"
+        
+        default:
+            out "operation failed for unknown reason"
+
+        }
+    }
+
+A `try` statement starts by executing the first few statements, up to the
+first `case` or `default`.
+If these statement run without errors, the `try` statement finishes.
+
+If these statements cause an error to be thrown (either explicitly, using
+`throw`, or implicitly, for example due to error propagation or division by
+zero), the error doesn't actually get thrown.
+Instead, the `try` statement looks for a `case` that matches the error.
+
+Each `case` contains a list of values (which are usually symbols).
+If *at least one* of these values is equal to *at least one* of the error
+values in the caught error, we say that the `case` matches the error.
+In this case, the body of the `case` gets executed, then the `try` statement
+finishes.
+
+If none of the `case` statements match the error, one of two thing happens:
+
+- If the `try` statement contains a `default` clause, the `default` clause
+  runs, then the `try` statement finishes.
+- Otherwise, since none of the cases has matched the error, the error gets
+  re-thrown.
+
+**Example:**
+
+    // A "safe" division process.
+    Divide -> {
+        a, b := in
+        if not [IsNumber a] or not [IsNumber b] {
+            throw .TypeError "Divide got wrong type"
+        }
+        if b == 0 {
+            throw .DivisionByZero
+        }
+        out (a / b)
+    }
+
+    Main -> {
+        a, b := in
+        try {
+            // Divide will throw .TypeError "Divide got wrong type",
+            // since `a` and `b` are strings.
+            out [Divide a b]
+        
+        // This will not match.
+        case .DivisionByZero:
+            out "Oh no!"
+        
+        // Since there is no `default`, `Main` will rethrow the same error.
+
+        }
+    }
 
 Try-Finally Statement
 ---------------------
