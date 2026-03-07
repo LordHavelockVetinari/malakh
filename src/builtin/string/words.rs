@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::builtin::helper::{BasicFunction, BasicFunctionResult};
+use crate::builtin::helper::{Action, Function};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
@@ -21,14 +21,15 @@ impl Words {
     }
 }
 
-impl BasicFunction for Words {
+impl Function for Words {
     const NAME: &str = "Words";
 
-    fn new(_vm: &mut Vm) -> Self {
-        Self {
+    fn new(_vm: &mut Vm) -> (Self, Action) {
+        let this = Self {
             owner: None,
             data: NonNull::from(""),
-        }
+        };
+        (this, Action::Input)
     }
 
     fn gc_mark_content(&self, gc: &mut GarbageCollector) {
@@ -37,7 +38,7 @@ impl BasicFunction for Words {
         }
     }
 
-    fn input(&mut self, input: Value, vm: &mut Vm) -> BasicFunctionResult {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(owner) = input.as_string_ref() else {
             todo!("String::Words did not get a string");
         };
@@ -49,20 +50,20 @@ impl BasicFunction for Words {
         match self.next() {
             Some(result) => {
                 let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
-                BasicFunctionResult::Output(Value::from(result))
+                Action::Output(Value::from(result))
             }
-            None => BasicFunctionResult::Stop,
+            None => Action::Stop,
         }
     }
 
-    fn after_output(&mut self, vm: &mut Vm) -> BasicFunctionResult {
+    fn after_output(&mut self, vm: &mut Vm) -> Action {
         let owner = self.owner.unwrap();
         match self.next() {
             Some(result) => {
                 let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
-                BasicFunctionResult::Output(Value::from(result))
+                Action::Output(Value::from(result))
             }
-            None => BasicFunctionResult::Stop,
+            None => Action::Stop,
         }
     }
 }

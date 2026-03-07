@@ -3,129 +3,6 @@ use crate::vm::gc::GarbageCollector;
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
 
-pub trait BasicAggregator {
-    const NAME: &str;
-    fn new(vm: &mut Vm) -> Self;
-    fn gc_mark_content(&self, gc: &mut GarbageCollector);
-    fn get(&mut self, vm: &mut Vm) -> Option<Value>;
-    fn put(&mut self, value: Value, vm: &mut Vm);
-}
-
-#[repr(transparent)]
-pub struct AsBasicAggregator<T>(T);
-
-impl<T: BasicAggregator> BuiltinProcessData for AsBasicAggregator<T> {
-    const NAME: &str = <T as BasicAggregator>::NAME;
-
-    unsafe fn init(mut process: BuiltinProcessRef, parent: Option<BuiltinProcessRef>, vm: &mut Vm) {
-        debug_assert!(parent.is_none());
-        unsafe {
-            process.data_ptr::<T>().write(T::new(vm));
-        }
-        *process.state_mut() = ProcessState::OptIn;
-    }
-
-    unsafe fn gc_mark_content(process: BuiltinProcessRef, gc: &mut GarbageCollector) {
-        unsafe { process.data::<T>() }.gc_mark_content(gc);
-    }
-
-    unsafe fn enter(
-        mut process: BuiltinProcessRef,
-        vm: &mut Vm,
-        input: Option<Value>,
-    ) -> BuiltinProcessRef {
-        let state = process.state();
-        let this = unsafe { process.data_mut::<T>() };
-        match state {
-            ProcessState::OptIn => {
-                if let Some(input) = input {
-                    this.put(input, vm);
-                } else if let Some(output) = this.get(vm) {
-                    *process.output_slot_mut() = output;
-                    *process.state_mut() = ProcessState::Out;
-                }
-            }
-            ProcessState::Out => {
-                *process.state_mut() = ProcessState::OptIn;
-            }
-            _ => unreachable!("trying to run aggregator process in state {:?}", state),
-        }
-        process
-    }
-}
-
-pub enum BasicFunctionResult {
-    Output(Value),
-    Stop,
-}
-
-pub trait BasicFunction {
-    const NAME: &str;
-    fn new(vm: &mut Vm) -> Self;
-
-    fn gc_mark_content(&self, gc: &mut GarbageCollector);
-
-    fn input(&mut self, input: Value, vm: &mut Vm) -> BasicFunctionResult;
-
-    fn after_output(&mut self, vm: &mut Vm) -> BasicFunctionResult {
-        let _ = vm;
-        BasicFunctionResult::Stop
-    }
-}
-
-#[repr(transparent)]
-pub struct AsBasicFunction<T>(T);
-
-impl<T: BasicFunction> BuiltinProcessData for AsBasicFunction<T> {
-    const NAME: &str = <T as BasicFunction>::NAME;
-
-    unsafe fn init(mut process: BuiltinProcessRef, parent: Option<BuiltinProcessRef>, vm: &mut Vm) {
-        debug_assert!(parent.is_none());
-        unsafe {
-            process.data_ptr::<T>().write(T::new(vm));
-        }
-        *process.state_mut() = ProcessState::In;
-    }
-
-    unsafe fn gc_mark_content(process: BuiltinProcessRef, gc: &mut GarbageCollector) {
-        unsafe { process.data::<T>() }.gc_mark_content(gc);
-    }
-
-    unsafe fn enter(
-        mut process: BuiltinProcessRef,
-        vm: &mut Vm,
-        input: Option<Value>,
-    ) -> BuiltinProcessRef {
-        use BasicFunctionResult::*;
-        let state = process.state();
-        let this = unsafe { process.data_mut::<T>() };
-        match state {
-            ProcessState::In => {
-                let input = input.expect("process in .In state running without input");
-                match this.input(input, vm) {
-                    Output(output) => {
-                        *process.output_slot_mut() = output;
-                        *process.state_mut() = ProcessState::Out;
-                    }
-                    Stop => {
-                        *process.state_mut() = ProcessState::Stop;
-                    }
-                }
-            }
-            ProcessState::Out => match this.after_output(vm) {
-                Output(output) => {
-                    *process.output_slot_mut() = output;
-                }
-                Stop => {
-                    *process.state_mut() = ProcessState::Stop;
-                }
-            },
-            _ => unreachable!("trying to run function process in state {:?}", state),
-        }
-        process
-    }
-}
-
 pub enum Action {
     Input,
     OptionalInput,
@@ -247,6 +124,48 @@ impl<T: Function> BuiltinProcessData for AsFunction<T> {
         process
     }
 }
+
+pub trait BasicAggregator {
+    const NAME: &str;
+    fn new(vm: &mut Vm) -> Self;
+    fn gc_mark_content(&self, gc: &mut GarbageCollector);
+    fn get(&mut self, vm: &mut Vm) -> Option<Value>;
+    fn put(&mut self, value: Value, vm: &mut Vm);
+}
+
+#[repr(transparent)]
+pub struct AggregatorToFunction<T>(T);
+
+impl<T: BasicAggregator> Function for AggregatorToFunction<T> {
+    const NAME: &str = <T as BasicAggregator>::NAME;
+
+    fn new(vm: &mut Vm) -> (Self, Action) {
+        (AggregatorToFunction(T::new(vm)), Action::OptionalInput)
+    }
+
+    fn gc_mark_content(&self, gc: &mut GarbageCollector) {
+        self.0.gc_mark_content(gc);
+    }
+
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
+        self.0.put(input, vm);
+        Action::OptionalInput
+    }
+
+    fn no_input(&mut self, vm: &mut Vm) -> Action {
+        if let Some(output) = self.0.get(vm) {
+            Action::Output(output)
+        } else {
+            Action::OptionalInput
+        }
+    }
+
+    fn after_output(&mut self, _vm: &mut Vm) -> Action {
+        Action::OptionalInput
+    }
+}
+
+pub type AsBasicAggregator<T> = AsFunction<AggregatorToFunction<T>>;
 
 pub trait Method: Sized {
     type Parent: BuiltinProcessData;

@@ -1,24 +1,23 @@
 use std::str::FromStr;
 
-use crate::builtin::helper::{self, BasicFunction};
+use crate::builtin::helper::{Action, Function};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
 pub struct ToFloat;
 
-impl BasicFunction for ToFloat {
+impl Function for ToFloat {
     const NAME: &str = "ToFloat";
 
-    fn new(_vm: &mut Vm) -> Self {
-        Self
+    fn new(_vm: &mut Vm) -> (Self, Action) {
+        (Self, Action::Input)
     }
 
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
-    fn input(&mut self, input: Value, vm: &mut Vm) -> helper::BasicFunctionResult {
-        use helper::BasicFunctionResult::*;
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         if input.is_float() {
-            return Output(input);
+            return Action::Output(input);
         }
         let result = if let Some(result) = input.number_to_f64() {
             result
@@ -28,14 +27,14 @@ impl BasicFunction for ToFloat {
             };
             let s = s.bytes();
             if !s.is_ascii() {
-                return Stop;
+                return Action::Stop;
             }
             let s = str::from_utf8(s).unwrap();
             let Ok(result) = f64::from_str(s) else {
-                return Stop;
+                return Action::Stop;
             };
             result
         };
-        Output(Value::alloc_from(result, vm.gc_mut()))
+        Action::Output(Value::alloc_from(result, vm.gc_mut()))
     }
 }

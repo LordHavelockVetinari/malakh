@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::LazyLock;
 
-use crate::builtin::helper::{AsBasicAggregator, AsBasicFunction, AsFunction};
+use crate::builtin::helper::{AsBasicAggregator, AsFunction};
 use crate::vm::builder::VmBuilder;
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessFamily};
 
@@ -177,9 +177,9 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsFunction<is_symbol::IsSymbol>>(ROOT_PATH)
         .add_type::<AsFunction<is_bool::IsBool>>(ROOT_PATH)
         .add_type::<AsFunction<is_process::IsProcess>>(ROOT_PATH)
-        .add_type::<AsBasicFunction<to_int::ToInt>>(ROOT_PATH)
-        .add_type::<AsBasicFunction<to_float::ToFloat>>(ROOT_PATH)
-        .add_type::<AsBasicFunction<to_number::ToNumber>>(ROOT_PATH)
+        .add_type::<AsFunction<to_int::ToInt>>(ROOT_PATH)
+        .add_type::<AsFunction<to_float::ToFloat>>(ROOT_PATH)
+        .add_type::<AsFunction<to_number::ToNumber>>(ROOT_PATH)
         .add_type::<AsFunction<range::Range>>(ROOT_PATH)
         .add_type::<AsFunction<assert::Assert>>(ROOT_PATH)
         .add_type::<AsFunction<assert_err::AssertErr>>(ROOT_PATH)
@@ -218,17 +218,17 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsFunction<math::floor::Floor>>("Math")
         .add_type::<AsFunction<math::ceil::Ceil>>("Math")
         .add_module_to_root("String")
-        .add_type::<AsBasicFunction<string::length::Length>>("String")
-        .add_type::<AsBasicFunction<string::bytes::Bytes>>("String")
+        .add_type::<AsFunction<string::length::Length>>("String")
+        .add_type::<AsFunction<string::bytes::Bytes>>("String")
         .add_type::<AsBasicAggregator<string::from_bytes::FromBytes>>("String")
-        .add_type::<AsBasicFunction<string::words::Words>>("String")
+        .add_type::<AsFunction<string::words::Words>>("String")
         .add_type::<AsBasicAggregator<string::from_words::FromWords>>("String")
-        .add_type::<AsBasicFunction<string::lines::Lines>>("String")
+        .add_type::<AsFunction<string::lines::Lines>>("String")
         .add_type::<AsBasicAggregator<string::from_lines::FromLines>>("String")
         .add_type::<AsFunction<string::slice::Slice>>("String")
         .add_module_to_root("Process")
-        .add_type::<AsBasicFunction<process::state::State>>("Process")
-        .add_type::<AsBasicFunction<process::peek::Peek>>("Process")
+        .add_type::<AsFunction<process::state::State>>("Process")
+        .add_type::<AsFunction<process::peek::Peek>>("Process")
 });
 
 pub static BUILTINS: LazyLock<&[&'static BuiltinProcessFamily]> =
