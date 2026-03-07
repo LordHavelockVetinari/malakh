@@ -124,6 +124,10 @@ impl ErrorRef {
         }
         Ok(())
     }
+
+    pub fn matches(&self, value: Value) -> bool {
+        self.values().contains(&value)
+    }
 }
 
 impl From<ErrorRef> for BuiltinProcessRef {

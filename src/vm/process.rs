@@ -1,3 +1,5 @@
+use std::mem;
+
 use either::Either::{self, Left, Right};
 
 use crate::vm::builtin_process::BuiltinProcessRef;
@@ -17,6 +19,24 @@ pub enum ProcessState {
     ForkIn,
     Out,
     Err,
+}
+
+pub trait ProcessRef: Sized {
+    fn state(&self) -> ProcessState;
+
+    fn state_mut(&mut self) -> &mut ProcessState;
+
+    fn output_slot(&self) -> Value;
+
+    fn output_slot_mut(&mut self) -> &mut Value;
+
+    fn error(&self, vm: &mut Vm) -> Option<ErrorRef> {
+        if self.state() == ProcessState::Err {
+            Some(unsafe { ErrorRef::from_value(self.output_slot(), vm) })
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -58,28 +78,6 @@ impl AnyProcessRef {
         }
         unsafe { Left(self.0.as_builtin_process_ref().unwrap_unchecked()) }
     }
-
-    pub fn state(&self) -> ProcessState {
-        match self.builtin_or_user_defined() {
-            Left(proc) => proc.state(),
-            Right(proc) => proc.state(),
-        }
-    }
-
-    pub fn output_slot(&self) -> Value {
-        match self.builtin_or_user_defined() {
-            Left(proc) => proc.output_slot(),
-            Right(proc) => proc.output_slot(),
-        }
-    }
-
-    pub fn error(&self, vm: &mut Vm) -> Option<ErrorRef> {
-        if self.state() == ProcessState::Err {
-            Some(unsafe { ErrorRef::from_value(self.output_slot(), vm) })
-        } else {
-            None
-        }
-    }
 }
 
 impl From<BuiltinProcessRef> for AnyProcessRef {
@@ -91,5 +89,47 @@ impl From<BuiltinProcessRef> for AnyProcessRef {
 impl From<UserProcessRef> for AnyProcessRef {
     fn from(user_process: UserProcessRef) -> Self {
         Self(Value::from(user_process))
+    }
+}
+
+impl ProcessRef for AnyProcessRef {
+    fn state(&self) -> ProcessState {
+        match self.builtin_or_user_defined() {
+            Left(proc) => proc.state(),
+            Right(proc) => proc.state(),
+        }
+    }
+
+    fn state_mut(&mut self) -> &mut ProcessState {
+        match self.builtin_or_user_defined() {
+            Left(mut builtin) => {
+                let ref_mut = builtin.state_mut();
+                unsafe { mem::transmute::<&mut ProcessState, &mut ProcessState>(ref_mut) }
+            }
+            Right(mut user_defined) => {
+                let ref_mut = user_defined.state_mut();
+                unsafe { mem::transmute::<&mut ProcessState, &mut ProcessState>(ref_mut) }
+            }
+        }
+    }
+
+    fn output_slot(&self) -> Value {
+        match self.builtin_or_user_defined() {
+            Left(builtin) => builtin.output_slot(),
+            Right(user_defined) => user_defined.output_slot(),
+        }
+    }
+
+    fn output_slot_mut(&mut self) -> &mut Value {
+        match self.builtin_or_user_defined() {
+            Left(mut builtin) => {
+                let ref_mut = builtin.output_slot_mut();
+                unsafe { mem::transmute::<&mut Value, &mut Value>(ref_mut) }
+            }
+            Right(mut user_defined) => {
+                let ref_mut = user_defined.output_slot_mut();
+                unsafe { mem::transmute::<&mut Value, &mut Value>(ref_mut) }
+            }
+        }
     }
 }

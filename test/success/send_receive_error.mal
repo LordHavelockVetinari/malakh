@@ -1,0 +1,24 @@
+Main := {
+    out "SEND"
+    AssertErr { 1 .Foo }
+    AssertErr { 1.0 .Foo }
+    AssertErr { "" .Foo }
+    AssertErr { .Bar .Foo }
+    AssertErr { {} .Foo }
+    AssertErr { { out 1 } .Foo }
+    AssertErr { { err 123 } .Foo }
+    AssertErr { Main .Foo }
+    out "RECV"
+    AssertErr { [1] }
+    AssertErr { [1.0] }
+    AssertErr { [""] }
+    AssertErr { [.Foo] }
+    AssertErr { [{}] }
+    AssertErr { [{ err 123 }] }
+    AssertErr { [{ in }] }
+    AssertErr { [{ x := in; else {} }] }
+    AssertErr { [{ x := in; else { err 123 } }] }
+    AssertErr { [{ x := in; else { x = in; else { out 123 } } }] }
+    AssertErr { [{ x := in; else { x = in; else { err 123 } } }] }
+    out "DONE"
+}

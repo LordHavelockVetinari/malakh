@@ -1,0 +1,41 @@
+Main -> {
+    values := [List::Of 1 1.0 "1" .One { out 1 }]
+
+    while x := [values .Each] {
+        while y := [values .Each] {
+            if [IsNumber x] and [IsNumber y] {
+                x + y
+                x - y
+                x * y
+                x / y
+                x % y
+                +x
+                -x
+            }
+            else {
+                try { x + y;  out "expected an error"; default: }
+                try { x - y;  out "expected an error"; default: }
+                try { x * y;  out "expected an error"; default: }
+                try { x / y;  out "expected an error"; default: }
+                try { x % y;  out "expected an error"; default: }
+                try { +x; +y; out "expected an error"; default: }
+                try { -x; -y; out "expected an error"; default: }
+            }
+        }
+    }
+    out "OK 1"
+    try {
+        1 / 0
+    default:
+        out "OK 2"
+    }
+    try {
+        -3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 / 0
+    default:
+        out "OK 3"
+    }
+    1.0 / 0
+    out "OK 4"
+    1 / 0.0
+    out "OK 5"
+}

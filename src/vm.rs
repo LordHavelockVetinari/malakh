@@ -27,7 +27,7 @@ use crate::vm::error::ErrorRef;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::global_variable::GlobalVariable;
 use crate::vm::options::VmOptions;
-use crate::vm::process::{AnyProcessRef, ProcessState};
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::user_process::UserProcessFamily;
 
 #[derive(Debug)]
@@ -142,19 +142,12 @@ impl Vm {
         }
     }
 
-    fn _propagate_error_inner(&mut self, original_process: AnyProcessRef) {
+    pub fn propagate_error<P: ProcessRef>(&mut self, original_process: P) {
         let cause = original_process
             .error(self)
             .expect("cannot propagate error unless original process is in .Err state");
         let error = ErrorRef::new_propagated(self, cause);
         self.throw_from_current_process(error);
-    }
-
-    pub fn propagate_error<P>(&mut self, original_process: P)
-    where
-        AnyProcessRef: From<P>,
-    {
-        self._propagate_error_inner(AnyProcessRef::from(original_process));
     }
 
     pub fn pause_user_process(&mut self) {

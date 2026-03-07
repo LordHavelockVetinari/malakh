@@ -1,5 +1,6 @@
 use crate::builtin::helper::{self, BasicFunction, BasicFunctionResult};
 use crate::vm::gc::GarbageCollector;
+use crate::vm::process::ProcessRef;
 use crate::vm::{Value, Vm};
 
 pub struct State;

@@ -27,4 +27,7 @@ Main -> {
         default:
             out "done"
     }
+    AssertErr { switch 1 { case 2: case 3: } }
+    AssertErr { switch NaN { case NaN: } }
+    AssertStop { switch NaN { default: } }
 }

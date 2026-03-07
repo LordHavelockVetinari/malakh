@@ -1,6 +1,6 @@
 use crate::builtin::helper::{self, BasicFunction, BasicFunctionResult};
 use crate::vm::gc::GarbageCollector;
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
 
 pub struct Peek;

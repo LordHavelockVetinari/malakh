@@ -1,6 +1,6 @@
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessRef};
 use crate::vm::gc::GarbageCollector;
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
 
 pub trait BasicAggregator {

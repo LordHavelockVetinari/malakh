@@ -1,0 +1,23 @@
+Err1 -> { err .OhNo }
+Err2 := { err .OhNo }
+
+Main -> {
+    AssertErr .OhNo { err .OhNo }
+    AssertStop { ({ err .OhNo }) }
+    AssertErr .OhNo { [{ err .OhNo }] }
+    AssertErr .OhNo { { err .OhNo } .Foo }
+    AssertErr .OhNo { x := { err .OhNo }; x }
+    AssertErr .OhNo { Err1 }
+    AssertErr .OhNo { Err2 }
+    AssertStop { ({ in; err .OhNo }) }
+    AssertErr .OhNo { { in; err .OhNo } .Spam }
+    AssertStop { { in; in; err .OhNo } .Spam }
+    AssertErr .OhNo { (Err1) }
+    AssertErr .OhNo { ((Err2)) }
+    AssertErr .OhNo { ({ err .OhNo } .Foo) }
+    AssertErr .OhNo { 1 + 2 * 3 ^ [{ err .OhNo }] * 4 + 5 }
+    AssertErr .OhNo { _ := [{ err .OhNo }]; else {} }
+    AssertErr .OhNo { if _ := [{ err .OhNo }] {} }
+    AssertErr .OhNo { while _ := [{ err .OhNo }] {} }
+    out "DONE"
+}

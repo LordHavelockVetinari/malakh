@@ -13,10 +13,8 @@ DivideOrZero -> {
     a, b := in
     try {
         out [Divide a b]
-    
     case .MathError:
         out 0
-
     }
 }
 
@@ -24,19 +22,17 @@ Main -> {
     try {
         Divide 1 2
         out "1st"
-    
     default:
         out "error 1"
-
     }
 
     try {
         Divide 1 0
         out "error 2"
-    
+
     case .TypeError:
         out "error 3"
-    
+
     case .MathError:
         out "2nd"
 
@@ -55,10 +51,8 @@ Main -> {
 
     try {
         out [Cat [DivideOrZero 36 9] "th"]
-    
     default:
         out "error 5"
-
     }
 
     zero := [DivideOrZero 30 0]

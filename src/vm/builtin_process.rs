@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 use std::ptr::{self, NonNull};
 
 use crate::vm::gc::{GarbageCollector, GcInfo};
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
 
 pub struct BuiltinProcessFamily {
@@ -122,22 +122,6 @@ impl BuiltinProcessRef {
         self.family().name
     }
 
-    pub fn output_slot(&self) -> Value {
-        self.header().output_slot
-    }
-
-    pub fn output_slot_mut(&mut self) -> &mut Value {
-        &mut self.header_mut().output_slot
-    }
-
-    pub fn state(&self) -> ProcessState {
-        self.header().state
-    }
-
-    pub fn state_mut(&mut self) -> &mut ProcessState {
-        &mut self.header_mut().state
-    }
-
     pub fn data_ptr<T>(&mut self) -> NonNull<T> {
         unsafe { self.0.add(1).cast::<T>() }
     }
@@ -171,5 +155,23 @@ impl BuiltinProcessRef {
             alloc::dealloc(self.0.as_ptr().cast::<u8>(), family.layout);
         }
         false
+    }
+}
+
+impl ProcessRef for BuiltinProcessRef {
+    fn state(&self) -> ProcessState {
+        self.header().state
+    }
+
+    fn state_mut(&mut self) -> &mut ProcessState {
+        &mut self.header_mut().state
+    }
+
+    fn output_slot(&self) -> Value {
+        self.header().output_slot
+    }
+
+    fn output_slot_mut(&mut self) -> &mut Value {
+        &mut self.header_mut().output_slot
     }
 }

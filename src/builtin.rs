@@ -7,6 +7,8 @@ use crate::vm::builder::VmBuilder;
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessFamily};
 
 mod assert;
+mod assert_err;
+mod assert_stop;
 mod cat;
 mod constants;
 mod helper;
@@ -180,6 +182,8 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsBasicFunction<to_number::ToNumber>>(ROOT_PATH)
         .add_type::<AsFunction<range::Range>>(ROOT_PATH)
         .add_type::<AsFunction<assert::Assert>>(ROOT_PATH)
+        .add_type::<AsFunction<assert_err::AssertErr>>(ROOT_PATH)
+        .add_type::<AsFunction<assert_stop::AssertStop>>(ROOT_PATH)
         .add_type_init::<list::List>(ROOT_PATH, list::init)
         .add_module_to_root("List")
         .add_type::<AsFunction<list::of::Of>>("List")

@@ -3,7 +3,7 @@ use std::mem::{self, MaybeUninit};
 use std::ptr::NonNull;
 
 use crate::vm::gc::GarbageCollector;
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 
 use super::gc::GcInfo;
 use super::{Instruction, Value};
@@ -103,22 +103,6 @@ impl UserProcessRef {
         &mut self.header_mut().instruction_pointer
     }
 
-    pub fn output_slot(&self) -> Value {
-        self.memory()[0]
-    }
-
-    pub fn output_slot_mut(&mut self) -> &mut Value {
-        &mut self.memory_mut()[0]
-    }
-
-    pub fn state(&self) -> ProcessState {
-        self.header().state
-    }
-
-    pub fn state_mut(&mut self) -> &mut ProcessState {
-        &mut self.header_mut().state
-    }
-
     pub fn set_can_resume(&mut self) {
         self.header_mut().can_resume = true;
     }
@@ -169,5 +153,23 @@ impl UserProcessRef {
             alloc::dealloc(self.0.as_ptr().cast::<u8>(), self.family().layout());
         }
         false
+    }
+}
+
+impl ProcessRef for UserProcessRef {
+    fn state(&self) -> ProcessState {
+        self.header().state
+    }
+
+    fn state_mut(&mut self) -> &mut ProcessState {
+        &mut self.header_mut().state
+    }
+
+    fn output_slot(&self) -> Value {
+        self.memory()[0]
+    }
+
+    fn output_slot_mut(&mut self) -> &mut Value {
+        &mut self.memory_mut()[0]
     }
 }

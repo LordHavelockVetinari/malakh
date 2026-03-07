@@ -2,7 +2,7 @@ use crate::builtin::helper::define_class;
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessRef};
 use crate::vm::error::ErrorData;
 use crate::vm::gc::GarbageCollector;
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
 
 define_class! {}

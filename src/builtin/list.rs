@@ -9,7 +9,7 @@ mod push;
 
 use crate::builtin::helper;
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessRef};
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
 
 pub struct List {

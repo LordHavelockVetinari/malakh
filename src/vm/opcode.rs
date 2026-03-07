@@ -8,7 +8,7 @@ use either::Either::{Left, Right};
 use crate::vm::builtin_process::BuiltinProcessRef;
 use crate::vm::capture::CaptureRef;
 use crate::vm::error::ErrorRef;
-use crate::vm::process::ProcessState;
+use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::user_process::UserProcessRef;
 use crate::vm::{Value, throw_from_current_process};
 
@@ -535,12 +535,18 @@ fn run_try_receive(vm: &mut Vm, inst: Instruction) {
     let (dst1, dst2, src) = inst.as_three_operand();
     let src = vm.register(src);
     if let Some(mut proc) = src.as_builtin_process_ref() {
-        if proc.state() == ProcessState::Out {
-            *vm.register_mut(dst1) = mem::take(proc.output_slot_mut());
-            *vm.register_mut(dst2) = Value::TRUE;
-            vm.enter_builtin_process(proc, None);
-        } else {
-            *vm.register_mut(dst2) = Value::FALSE;
+        match proc.state() {
+            ProcessState::Out => {
+                *vm.register_mut(dst1) = mem::take(proc.output_slot_mut());
+                *vm.register_mut(dst2) = Value::TRUE;
+                vm.enter_builtin_process(proc, None);
+            }
+            ProcessState::Err => {
+                vm.propagate_error(proc);
+            }
+            _ => {
+                *vm.register_mut(dst2) = Value::FALSE;
+            }
         }
         return;
     }
@@ -554,6 +560,9 @@ fn run_try_receive(vm: &mut Vm, inst: Instruction) {
             *vm.register_mut(dst2) = Value::TRUE;
             *proc.state_mut() = ProcessState::Run;
             vm.enter_user_process(proc);
+        }
+        ProcessState::Err => {
+            vm.propagate_error(proc);
         }
         _ => {
             *vm.register_mut(dst2) = Value::FALSE;
@@ -619,6 +628,8 @@ fn run_send(vm: &mut Vm, inst: Instruction) {
             vm.enter_user_process(proc);
         }
         (ProcessState::ForkIn, Right(_)) => todo!("send to user process in ForkIn state"),
+        (ProcessState::Err, Left(p)) => vm.propagate_error(p),
+        (ProcessState::Err, Right(p)) => vm.propagate_error(p),
         _ => throw_from_current_process!(
             vm,
             "failed to send input: process was in {:?} state",
@@ -789,8 +800,7 @@ fn run_error_matches(vm: &mut Vm, inst: Instruction) {
     let error_src = vm.register(error_src);
     let value_src = vm.register(value_src);
     let error = unsafe { ErrorRef::from_value(error_src, vm) };
-    let result = error.values().contains(&value_src);
-    *vm.register_mut(dst) = Value::from(result);
+    *vm.register_mut(dst) = Value::from(error.matches(value_src));
 }
 
 fn run_debug(vm: &mut Vm, inst: Instruction) {

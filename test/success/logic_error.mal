@@ -1,0 +1,59 @@
+Main -> {
+    out "NOT"
+    AssertErr  { not 1 }
+    AssertErr  { not 1.0 }
+    AssertErr  { not .Foo }
+    AssertErr  { not {} }
+    out "AND"
+    AssertErr  { 1 and .True }
+    AssertErr  { 1 and 2 }
+    AssertErr  { 1.0 and .True }
+    AssertErr  { "true" and .False }
+    AssertErr  { .Foo and .False }
+    AssertErr  { {} and .False }
+    AssertErr  { .True and 1 }
+    AssertErr  { .True and 1.0 }
+    AssertErr  { .True and "true" }
+    AssertErr  { .True and .Foo }
+    AssertErr  { .True and {} }
+    AssertStop { .False and 1 }
+    AssertStop { .False and 1.0 }
+    AssertStop { .False and "true" }
+    AssertStop { .False and .Foo }
+    AssertStop { .False and {} }
+    out "OR"
+    AssertErr  { 1 or .True }
+    AssertErr  { 1 or 2 }
+    AssertErr  { 1.0 or .True }
+    AssertErr  { "true" or .False }
+    AssertErr  { .Foo or .False }
+    AssertErr  { {} or .False }
+    AssertErr  { .False or 1 }
+    AssertErr  { .False or 1.0 }
+    AssertErr  { .False or "true" }
+    AssertErr  { .False or .Foo }
+    AssertErr  { .False or {} }
+    AssertStop { .True or 1 }
+    AssertStop { .True or 1.0 }
+    AssertStop { .True or "true" }
+    AssertStop { .True or .Foo }
+    AssertStop { .True or {} }
+    out "XOR"
+    AssertErr  { 1 xor .True }
+    AssertErr  { 1 xor 2 }
+    AssertErr  { 1.0 xor .True }
+    AssertErr  { "true" xor .False }
+    AssertErr  { .Foo xor .False }
+    AssertErr  { {} xor .False }
+    AssertErr  { .False xor 1 }
+    AssertErr  { .False xor 1.0 }
+    AssertErr  { .False xor "true" }
+    AssertErr  { .False xor .Foo }
+    AssertErr  { .False xor {} }
+    AssertErr  { .True xor 1 }
+    AssertErr  { .True xor 1.0 }
+    AssertErr  { .True xor "true" }
+    AssertErr  { .True xor .Foo }
+    AssertErr  { .True xor {} }
+    out "DONE"
+}

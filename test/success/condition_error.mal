@@ -1,0 +1,51 @@
+Main -> {
+    out "IF"
+    AssertErr  { if 1 {} }
+    AssertErr  { if 1.0 {} }
+    AssertErr  { if "" {} }
+    AssertErr  { if .Foo {} }
+    AssertErr  { if {} {} }
+    AssertErr  { if .False {} else if 1 {} }
+    AssertErr  { if .False {} else if 1.0 {} }
+    AssertErr  { if .False {} else if "" {} }
+    AssertErr  { if .False {} else if .Foo {} }
+    AssertErr  { if .False {} else if {} {} }
+    AssertStop { if .True {} else if 1 {} }
+    AssertStop { if .True {} else if 1.0 {} }
+    AssertStop { if .True {} else if "" {} }
+    AssertStop { if .True {} else if .Foo {} }
+    AssertStop { if .True {} else if {} {} }
+    AssertErr  { if x := [1] {} }
+    AssertErr  { if x := [1.0] {} }
+    AssertErr  { if x := [""] {} }
+    AssertErr  { if x := [.Foo] {} }
+    AssertErr  { if x := [{err .Foo}] {} }
+    AssertErr  { if x, y := [{out 1}], [{err .Foo}] {} }
+    AssertStop { if x, y := [{}], [{err .Foo}] {} }
+    AssertStop { _ := [{ if x, y := in, [{err .Foo}] {} }]; else {} }
+    out "WHILE"
+    AssertErr  { while 1 {} }
+    AssertErr  { while 1.0 {} }
+    AssertErr  { while "" {} }
+    AssertErr  { while .Foo {} }
+    AssertErr  { while {} {} }
+    AssertErr  { while x := [1] {} }
+    AssertErr  { while x := [1.0] {} }
+    AssertErr  { while x := [""] {} }
+    AssertErr  { while x := [.Foo] {} }
+    AssertErr  { while x := [{err .Foo}] {} }
+    AssertErr  { while x := [{out 1 2 3; err 4}] {} }
+    AssertErr  { while x, y := [{out 1}], [{err .Foo}] {} }
+    AssertStop { while x, y := [{}], [{err .Foo}] {} }
+    AssertStop { _ := [{ while x, y := in, [{err .Foo}] {} }]; else {} }
+    out "ASSIGN ELSE"
+    AssertErr  { x := [1]; else {} }
+    AssertErr  { x := [1.0]; else {} }
+    AssertErr  { x := [""]; else {} }
+    AssertErr  { x := [.Foo]; else {} }
+    AssertErr  { x := [{err .Foo}]; else {} }
+    AssertErr  { x, y := [{out 1}], [{err .Foo}]; else {} }
+    AssertStop { x, y := [{}], [{err .Foo}]; else {} }
+    AssertStop { _ := [{ x, y := in, [{err .Foo}]; else {} }]; else {} }
+    out "DONE"
+}
