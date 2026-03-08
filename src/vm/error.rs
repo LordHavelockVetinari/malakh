@@ -116,7 +116,14 @@ impl ErrorRef {
         error
     }
 
-    pub fn pretty_print<W: Write>(&self, output: &mut W) -> Result<(), io::Error> {
+    pub fn pretty_print<W: Write>(&self, vm: &Vm, output: &mut W) -> Result<(), io::Error> {
+        if vm.options().raw_errors {
+            for value in self.values() {
+                value.write_to(output)?;
+                writeln!(output)?;
+            }
+            return Ok(());
+        }
         let mut parts = Vec::new();
         parts.push(*self);
         while let Some(cause) = parts.last().unwrap().cause() {

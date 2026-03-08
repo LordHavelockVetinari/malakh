@@ -115,6 +115,7 @@ pub enum StmtType {
     Switch(Rc<Expr>, Vec<SwitchCase>),
     Loop(Option<Condition>, Vec<Rc<Stmt>>),
     Try(TryBlock),
+    BareBlock(Vec<Rc<Stmt>>),
 }
 
 #[derive(Debug)]
@@ -191,6 +192,7 @@ pub trait CodeVisitor {
     fn visit_if(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_loop(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
+    fn visit_bare_block(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Self::Output;
     fn visit_import_declaration(&mut self, decl: &Rc<ImportDeclaration>) -> Self::Output;
     fn visit_code_file(&mut self, file: &Rc<CodeFile>) -> Self::Output;
@@ -248,6 +250,7 @@ impl VisitableCode for &Rc<Stmt> {
             StmtType::Switch(..) => visitor.visit_switch(self),
             StmtType::Loop(..) => visitor.visit_loop(self),
             StmtType::Try(..) => visitor.visit_try(self),
+            StmtType::BareBlock(..) => visitor.visit_bare_block(self),
         }
     }
 }
@@ -465,6 +468,16 @@ pub trait DefaultCodeVisitor: Sized {
         Ok(())
     }
 
+    fn visit_bare_block(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        let Stmt(StmtType::BareBlock(stmts), _) = &**stmt else {
+            panic!("visitor method got wrong variant");
+        };
+        for stmt in stmts {
+            self.visit(stmt)?;
+        }
+        Ok(())
+    }
+
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Result<(), Self::Error> {
         for value in &decl.values {
             self.visit(value)?;
@@ -581,6 +594,10 @@ impl<U: DefaultCodeVisitor> CodeVisitor for U {
 
     fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Self::Output {
         DefaultCodeVisitor::visit_try(self, stmt)
+    }
+
+    fn visit_bare_block(&mut self, stmt: &Rc<Stmt>) -> Self::Output {
+        DefaultCodeVisitor::visit_bare_block(self, stmt)
     }
 
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Self::Output {

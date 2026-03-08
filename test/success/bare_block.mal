@@ -1,0 +1,23 @@
+Main -> {
+    out 1
+    {
+        out in
+    }
+    {
+        out in
+    } .Spam
+    {
+        out 3
+        out 4 5
+        {
+            out in
+        }
+    }
+    ({
+        out .Lovely .Spam
+        out .Wonderful .Spam
+    })
+    { out in }
+    { out in } { out in }
+    { out in }; { out in }
+}

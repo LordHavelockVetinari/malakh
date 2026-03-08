@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::io::Write;
 use std::mem;
 
 use either::Either::{Left, Right};
@@ -103,6 +102,7 @@ opcodes! {
     EXIT (3) = 101;
     DISPLAY_ERROR (3) = 102;
     ERROR_NO_CASE (3) = 103;
+    ERROR_NO_INPUT (3) = 104;
     UNREACHABLE (3) = 255;
 }
 
@@ -819,20 +819,18 @@ fn run_display_error(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), DISPLAY_ERROR);
     let (src, _, _) = inst.as_three_operand();
     let src = unsafe { ErrorRef::from_value(vm.register(src), vm) };
-    let mut stderr = std::io::stderr();
-    if vm.options().raw_errors {
-        for value in src.values() {
-            let _ = value.write_to(&mut stderr);
-            let _ = writeln!(stderr);
-        }
-    } else {
-        let _ = src.pretty_print(&mut stderr);
-    }
+    let _ = src.pretty_print(vm, &mut std::io::stderr());
 }
 
 fn run_error_no_case(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), ERROR_NO_CASE);
     throw_from_current_process!(vm, "no case matched in 'switch' statement")
+}
+
+fn run_error_no_input(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), ERROR_NO_INPUT);
+    let err = ErrorRef::from_string(vm, "Main failed to read input");
+    let _ = err.pretty_print(vm, &mut std::io::stderr());
 }
 
 fn run_unreachable(_: &mut Vm, inst: Instruction) {
@@ -894,6 +892,7 @@ static OPCODE_TABLE: [InstructionFn; 256] = {
     table[EXIT as usize] = run_exit;
     table[DISPLAY_ERROR as usize] = run_display_error;
     table[ERROR_NO_CASE as usize] = run_error_no_case;
+    table[ERROR_NO_INPUT as usize] = run_error_no_input;
     table[UNREACHABLE as usize] = run_unreachable;
     table
 };

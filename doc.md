@@ -77,8 +77,7 @@ Hopefully, they will all be added soon:
 - Local constructors.
 - Accessing local variables from nested processes.
 - Assignment to `_`.
-- Error handling (`err`, `throw`, `try`, `catch`, `finally`).
-- Bare blocks (`{ ... }` as a statement).
+- try-finally.
 - Binary and hexadecimal numbers.
 - The exponentiation operator (`^`).
 - `Data::Count`.

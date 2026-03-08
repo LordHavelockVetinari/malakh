@@ -907,6 +907,7 @@ impl Compiler {
                 Ok(())
             }
             StmtType::Try(try_block) => self.compile_try(try_block, builder),
+            StmtType::BareBlock(stmts) => self.compile_block(stmts, builder),
         }
     }
 
@@ -1035,11 +1036,13 @@ impl Compiler {
                 JUMP_IF 0, 3;
                 CONST 0, const_fork_in;
                 EQUALS 0, 0, 2;
-                JUMP_UNLESS 0, 4;
+                JUMP_UNLESS 0, 6;
                 NO_IN 3, 0, 0;
-                RECEIVE 0, 3, 0;
+                TRY_RECEIVE 0, 2, 3;
+                JUMP_IF 2, 1;
+                ERROR_NO_INPUT 0, 0, 0;
                 SEND 1, 1, 0;
-                JUMP 0, !17;
+                JUMP 0, !19;
                 CONST 0, const_opt_in;
                 EQUALS 0, 0, 2;
                 JUMP_UNLESS 0, 7;
@@ -1047,9 +1050,9 @@ impl Compiler {
                 TRY_RECEIVE 0, 2, 3;
                 JUMP_UNLESS 2, 2;
                 SEND 1, 1, 0;
-                JUMP 0, !25;
-                NO_IN 1, 0, 0;
                 JUMP 0, !27;
+                NO_IN 1, 0, 0;
+                JUMP 0, !29;
                 CONST 0, const_stop;
                 EQUALS 0, 0, 2;
                 JUMP_UNLESS 0, 1;
@@ -1060,7 +1063,7 @@ impl Compiler {
                 PEEK_ERR 0, 1, 0;
                 DISPLAY_ERROR 0, 0, 0;
                 RECEIVE_ERR 0, 1, 0;
-                JUMP 0, !38;
+                JUMP 0, !40;
                 UNREACHABLE 0, 0, 0;
             });
             builder.build()
