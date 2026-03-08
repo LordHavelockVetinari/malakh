@@ -1,9 +1,11 @@
 use std::cmp::Ordering;
 
-use crate::builtin::helper::{self, Action};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::symbol::Symbol;
 use crate::vm::{Value, Vm};
+
+struct NanError;
 
 enum Command {
     Start,
@@ -22,26 +24,24 @@ pub struct Range {
 }
 
 impl Range {
-    fn next(&mut self, vm: &mut Vm) -> Option<Value> {
+    fn next(&mut self, vm: &mut Vm) -> Result<Option<Value>, NanError> {
         let start = self.start;
         let end = self.end.unwrap();
         let step = self.step.unwrap();
         match start.compare(end).unwrap() {
-            Some(Ordering::Less) if self.is_reversed => None,
-            Some(Ordering::Greater) if !self.is_reversed => None,
-            Some(Ordering::Equal) if !self.is_inclusive => None,
+            Some(Ordering::Less) if self.is_reversed => Ok(None),
+            Some(Ordering::Greater) if !self.is_reversed => Ok(None),
+            Some(Ordering::Equal) if !self.is_inclusive => Ok(None),
             Some(_) => {
                 self.start = start.add(step, vm.gc_mut()).unwrap();
-                Some(start)
+                Ok(Some(start))
             }
-            None => {
-                todo!("Range got NaN")
-            }
+            None => Err(NanError),
         }
     }
 }
 
-impl helper::Function for Range {
+impl Function for Range {
     const NAME: &str = "Range";
 
     fn new(_vm: &mut Vm) -> (Self, Action) {
@@ -66,38 +66,53 @@ impl helper::Function for Range {
         }
     }
 
-    fn input(&mut self, input: Value, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         match self.command {
             Command::Start => {
                 if !input.is_number() {
-                    todo!("range didn't get a number")
+                    err!(
+                        vm,
+                        "type error: {} start is {}",
+                        Self::NAME,
+                        input.type_name()
+                    )
                 }
                 self.start = input;
                 self.command = Command::None;
                 Action::OptionalInput
             }
             Command::None => {
-                let Some(input) = input.as_symbol() else {
-                    todo!("Range expected a symbol");
+                let Some(cmd) = input.as_symbol() else {
+                    err!(
+                        vm,
+                        "type error: {} expected method; got {}",
+                        Self::NAME,
+                        input.type_name()
+                    );
                 };
-                if input == Symbol::TO {
+                if cmd == Symbol::TO {
                     self.command = Command::End;
-                } else if input == Symbol::THROUGH {
+                } else if cmd == Symbol::THROUGH {
                     self.is_inclusive = true;
                     self.command = Command::End;
-                } else if input == Symbol::STEP {
+                } else if cmd == Symbol::STEP {
                     self.command = Command::Step;
                 } else {
-                    todo!("bad argument to range");
+                    err!(vm, "undefined method: <range> {:?}", input);
                 }
                 Action::Input
             }
             Command::End => {
                 if !input.is_number() {
-                    todo!("range didn't get a number")
+                    err!(
+                        vm,
+                        "type error: {} end is {}",
+                        Self::NAME,
+                        input.type_name()
+                    )
                 }
                 if self.end.is_some() {
-                    todo!("double ending in range");
+                    err!(vm, "{} got end twice", Self::NAME);
                 }
                 self.end = Some(input);
                 self.command = Command::None;
@@ -105,10 +120,15 @@ impl helper::Function for Range {
             }
             Command::Step => {
                 if !input.is_number() {
-                    todo!("range didn't get a number")
+                    err!(
+                        vm,
+                        "type error: {} step is {}",
+                        Self::NAME,
+                        input.type_name()
+                    )
                 }
                 if self.step.is_some() {
-                    todo!("double step in range");
+                    err!(vm, "{} got step twice", Self::NAME);
                 }
                 self.step = Some(input);
                 if input.compare(Value::ZERO).unwrap() == Some(Ordering::Less) {
@@ -129,15 +149,17 @@ impl helper::Function for Range {
             self.step = Some(Value::ONE);
         }
         match self.next(vm) {
-            Some(value) => Action::Output(value),
-            None => Action::Stop,
+            Err(NanError) => err!(vm, "{} got NaN", Self::NAME),
+            Ok(Some(value)) => Action::Output(value),
+            Ok(None) => Action::Stop,
         }
     }
 
     fn after_output(&mut self, vm: &mut Vm) -> Action {
         match self.next(vm) {
-            Some(value) => Action::Output(value),
-            None => Action::Stop,
+            Err(NanError) => err!(vm, "{} got NaN", Self::NAME),
+            Ok(Some(value)) => Action::Output(value),
+            Ok(None) => Action::Stop,
         }
     }
 }

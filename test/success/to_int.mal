@@ -11,4 +11,7 @@ Main -> {
     out [ToInt (-20)]
     out [ToInt (3.9)]
     out [ToInt (-2.8)]
+
+    AssertErr { ToInt .Foo }
+    AssertErr { ToInt {} }
 }

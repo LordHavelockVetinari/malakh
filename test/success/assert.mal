@@ -1,6 +1,21 @@
 Main -> {
-    // TODO: check failed assertions after implementing error-handling.
     Assert (1 + 1 == 2)
     Assert [IsNumber 3.4]
     Assert (not [IsString .Symbol])
+    try { Assert 1; default: out "OK 1" }
+    try { Assert .False; default: out "OK 2" }
+    
+    AssertStop {}
+    AssertStop (AssertStop {})
+    try { AssertStop {in}; default: out "OK 3" }
+    try { AssertStop {err 123}; case 123: out "OK 4" }
+
+    AssertErr "ignoreme"
+    AssertErr { err 123 }
+    try { AssertErr {}; default: out "OK 5" }
+
+    AssertErr .Foobar { err .Foobar }
+    AssertErr 1 { throw "foo" 1.0 "bar" }
+    try { AssertErr .Foo {}; default: out "OK 6" }
+    try { AssertErr .Foo { err .Bar }; case .Bar: out "OK 7" }
 }

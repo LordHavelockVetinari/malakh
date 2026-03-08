@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -26,7 +26,7 @@ impl Function for Bytes {
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(s) = input.as_string_ref() else {
-            todo!("String::Bytes did not get a string");
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         let bytes = s.bytes();
         let Some((&first, rest)) = bytes.split_first() else {

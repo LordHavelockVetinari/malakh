@@ -10,4 +10,22 @@ Main -> {
     out [Range (-5) .Step (-1)]...
     out [Range (-10) .To (-31) .Step (-7)]...
     out [Range (-10) .Through (-31) .Step (-7)]...
+    r = Range (-Infinity) .To Infinity
+    out [r] [r] [r]
+
+    AssertErr { Range 1 2 }
+    AssertErr { Range 1 .Thru }
+    AssertErr { Range .From }
+    AssertErr { Range .To }
+    AssertErr { Range "" }
+    AssertErr { Range 1 .Step "" }
+    AssertErr { [Range NaN] }
+    AssertErr { [Range NaN .To 10] }
+    AssertErr { [Range 1 .To NaN] }
+    AssertErr { [Range 1 .Through NaN] }
+    AssertStop { Range 0 .Step NaN }
+    AssertStop { r := Range 1 .Step NaN; [r] }
+    AssertErr  { r := Range 1 .Step NaN; [r]; r }
+    AssertErr  { Range 1 .To 2 .Through 3 }
+    AssertErr  { Range 1 .Step 2 .Step 3 }
 }

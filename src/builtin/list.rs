@@ -1,13 +1,14 @@
 mod clear;
 mod copy;
 mod each;
+mod error;
 mod index;
 mod length;
 pub mod of;
 mod pop;
 mod push;
 
-use crate::builtin::helper;
+use crate::builtin::helper::{self, new_error};
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessRef};
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
@@ -25,6 +26,8 @@ helper::define_class!(
     COPY => self::copy::Copy,
     #[no_symbol]
     INDEX => self::index::Index,
+    #[no_symbol]
+    ERROR => self::error::Error,
 );
 
 impl BuiltinProcessData for List {
@@ -55,10 +58,18 @@ impl BuiltinProcessData for List {
             return BuiltinProcessRef::new(family, Some(process), vm);
         }
         let Some(cmd) = input.as_symbol() else {
-            todo!("List expected a symbol or an integer");
+            let error = new_error!(vm, "type error: <list> {}", input.type_name());
+            vm.put_temporary1(Value::from(error));
+            let index = *methods::ERROR.get().expect("List method uninitialized");
+            let family = vm.get_builtin_family(index);
+            return BuiltinProcessRef::new(family, Some(process), vm);
         };
         let Some(index) = symbol_to_method_index(cmd) else {
-            todo!("invalid list method");
+            let error = new_error!(vm, "undefined method: <list> {:?}", input);
+            vm.put_temporary1(Value::from(error));
+            let index = *methods::ERROR.get().expect("List method uninitialized");
+            let family = vm.get_builtin_family(index);
+            return BuiltinProcessRef::new(family, Some(process), vm);
         };
         let family = vm.get_builtin_family(index);
         BuiltinProcessRef::new(family, Some(process), vm)

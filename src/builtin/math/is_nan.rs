@@ -14,7 +14,7 @@ impl Function for IsNaN {
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
     fn input(&mut self, input: Value, _vm: &mut Vm) -> helper::Action {
-        let result = input.as_f64().is_some_and(f64::is_nan);
+        let result = input.is_nan();
         Action::Output(Value::from(result))
     }
 }

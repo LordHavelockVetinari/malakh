@@ -16,4 +16,8 @@ Main -> {
     list .Push 999
     out [list .Pop] [list .Pop] [list .Pop]
     out [list .Length]
+    
+    AssertErr { List .Foobar }
+    AssertErr { List 1.0 }
+    AssertErr { List List }
 }

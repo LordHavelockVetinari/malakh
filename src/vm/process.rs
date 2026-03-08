@@ -1,3 +1,4 @@
+use std::fmt::{self, Display};
 use std::mem;
 
 use either::Either::{self, Left, Right};
@@ -15,10 +16,23 @@ pub enum ProcessState {
     Stop,
     In,
     OptIn,
-    #[allow(unused)]
     ForkIn,
     Out,
     Err,
+}
+
+impl Display for ProcessState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Run => ".Run",
+            Self::Stop => ".Stop",
+            Self::In => ".In",
+            Self::OptIn => ".OptIn",
+            Self::ForkIn => ".ForkIn",
+            Self::Out => ".Out",
+            Self::Err => ".Err",
+        })
+    }
 }
 
 pub trait ProcessRef: Sized {

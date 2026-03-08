@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::builtin::helper;
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -8,11 +8,11 @@ pub struct Max {
     accumulator: Option<Value>,
 }
 
-impl helper::BasicAggregator for Max {
+impl Function for Max {
     const NAME: &str = "Max";
 
-    fn new(_vm: &mut Vm) -> Self {
-        Self { accumulator: None }
+    fn new(_vm: &mut Vm) -> (Self, Action) {
+        (Self { accumulator: None }, Action::Input)
     }
 
     fn gc_mark_content(&self, gc: &mut GarbageCollector) {
@@ -21,29 +21,37 @@ impl helper::BasicAggregator for Max {
         }
     }
 
-    fn get(&mut self, _vm: &mut Vm) -> Option<Value> {
-        self.accumulator
-    }
-
-    fn put(&mut self, value: Value, _vm: &mut Vm) {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         if let Some(acc) = &mut self.accumulator {
-            let Ok(ord) = acc.compare(value) else {
-                todo!("type error");
+            let Ok(ord) = acc.compare(input) else {
+                err!(
+                    vm,
+                    "type error: Max cannot compare {} and {}",
+                    acc.type_name(),
+                    input.type_name()
+                );
             };
+            debug_assert!(ord.is_some() || acc.is_nan() || input.is_nan());
             if ord == Some(Ordering::Less) || (ord.is_none() && !acc.is_nan()) {
-                #[cfg(debug_assertions)]
-                {
-                    if ord.is_none() && !acc.is_nan() {
-                        assert!(value.is_nan());
-                    }
-                }
-                *acc = value;
+                *acc = input;
             }
         } else {
-            if !(value.is_number() || value.is_string()) {
-                todo!("type error");
+            if !input.is_number() && !input.is_string() {
+                err!(vm, "type error: Max {}", input.type_name());
             }
-            self.accumulator = Some(value);
+            self.accumulator = Some(input);
         }
+        Action::OptionalInput
+    }
+
+    fn no_input(&mut self, _vm: &mut Vm) -> Action {
+        let output = self
+            .accumulator
+            .expect("accumulator should be Some during OptIn state");
+        Action::Output(output)
+    }
+
+    fn after_output(&mut self, _vm: &mut Vm) -> Action {
+        Action::OptionalInput
     }
 }

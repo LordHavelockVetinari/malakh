@@ -40,4 +40,18 @@ impl FloatRef {
         drop(unsafe { Box::<FloatData>::from_raw(self.0.as_ptr()) });
         false
     }
+
+    pub fn to_str(self, buffer: &mut ryu::Buffer) -> &str {
+        let x = self.value();
+        if x.is_finite() {
+            buffer.format_finite(x)
+        } else if x.is_nan() {
+            "NaN"
+        } else if x == f64::INFINITY {
+            "Infinity"
+        } else {
+            debug_assert!(x == -f64::INFINITY);
+            "-Infinity"
+        }
+    }
 }

@@ -1,4 +1,4 @@
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
@@ -14,9 +14,9 @@ impl Function for Peek {
 
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
-    fn input(&mut self, input: Value, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(process) = input.as_any_process_ref() else {
-            todo!("Process::Peek did not get a process");
+            err!(vm, "type error: {} {:?}", Self::NAME, input);
         };
         if process.state() != ProcessState::Out {
             return Action::Stop;

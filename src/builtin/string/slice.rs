@@ -1,4 +1,4 @@
-use crate::builtin::helper::{self, Action};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::symbol::Symbol;
 use crate::vm::{Value, Vm};
@@ -19,7 +19,7 @@ pub struct Slice {
     command: Command,
 }
 
-impl helper::Function for Slice {
+impl Function for Slice {
     const NAME: &str = "Slice";
 
     fn new(_vm: &mut Vm) -> (Self, Action) {
@@ -39,11 +39,11 @@ impl helper::Function for Slice {
         }
     }
 
-    fn input(&mut self, input: Value, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         match self.command {
             Command::String => {
                 if !input.is_string() {
-                    todo!("slice didn't get a string");
+                    err!(vm, "type error: {} {}", Self::NAME, input.type_name());
                 }
                 self.string = Some(input);
                 self.command = Command::Keyword;
@@ -51,32 +51,36 @@ impl helper::Function for Slice {
             }
             Command::Keyword => {
                 let Some(input) = input.as_symbol() else {
-                    todo!("String::Slice expected a symbol");
+                    err!(
+                        vm,
+                        "type error: Slice expected a method; got {}",
+                        input.type_name()
+                    );
                 };
                 if input == Symbol::FROM {
                     if self.start.is_some() {
-                        todo!("slice got start twice");
+                        err!(vm, "Slice got start twice");
                     }
                     self.command = Command::Start;
                 } else if input == Symbol::TO {
                     if self.end.is_some() {
-                        todo!("slice got end twice");
+                        err!(vm, "Slice got end twice");
                     }
                     self.command = Command::End;
                 } else if input == Symbol::THROUGH {
                     if self.end.is_some() {
-                        todo!("slice got end twice");
+                        err!(vm, "Slice got end twice");
                     }
                     self.is_inclusive = true;
                     self.command = Command::End;
                 } else {
-                    todo!("bad keyword passed to slice");
+                    err!(vm, "undefined method: <slice> .{}", input.name());
                 }
                 Action::Input
             }
             Command::Start => {
                 let Some(n) = input.as_usize_saturating() else {
-                    todo!("slice didn't get an integer");
+                    err!(vm, "type error: Slice start is {}", input.type_name());
                 };
                 self.start = Some(n);
                 self.command = Command::Keyword;
@@ -84,7 +88,7 @@ impl helper::Function for Slice {
             }
             Command::End => {
                 let Some(n) = input.as_usize_saturating() else {
-                    todo!("slice didn't get an integer");
+                    err!(vm, "type error: Slice end is {}", input.type_name());
                 };
                 self.end = Some(n);
                 self.command = Command::Keyword;
@@ -94,11 +98,9 @@ impl helper::Function for Slice {
     }
 
     fn no_input(&mut self, vm: &mut Vm) -> Action {
-        if self.command != Command::Keyword {
-            todo!("slice expected more input");
-        }
+        assert!(self.command == Command::Keyword);
         if self.start.is_none() && self.end.is_none() {
-            todo!("slice must get either start or end");
+            err!(vm, "Slice must get either start or end");
         }
         let s = self
             .string

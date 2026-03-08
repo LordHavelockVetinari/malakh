@@ -21,4 +21,7 @@ Main -> {
     out [ToFloat "-NaN"]
     out [ToFloat "-0.0"]
     out "!" [ToFloat "--inf"]... "!"
+
+    AssertErr { ToFloat .Foo }
+    AssertErr { ToFloat {} }
 }

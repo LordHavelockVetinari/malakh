@@ -1,4 +1,4 @@
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -18,7 +18,16 @@ impl Function for Atan2 {
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(x) = input.number_to_f64() else {
-            todo!("type error");
+            if self.arg1.is_some() {
+                err!(
+                    vm,
+                    "type error: {} Number {}",
+                    Self::NAME,
+                    input.type_name()
+                );
+            } else {
+                err!(vm, "type error: {} {}", Self::NAME, input.type_name());
+            }
         };
         if let Some(y) = self.arg1 {
             Action::Output(Value::alloc_from(y.atan2(x), vm.gc_mut()))

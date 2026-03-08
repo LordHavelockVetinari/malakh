@@ -1,4 +1,4 @@
-use crate::builtin::helper::{Action, Method};
+use crate::builtin::helper::{Action, Method, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::symbol::Symbol;
 use crate::vm::{Value, Vm};
@@ -30,11 +30,11 @@ impl Method for Index {
         gc.mark(self.index);
     }
 
-    fn input(&mut self, input: Value, parent: &mut Self::Parent, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, parent: &mut Self::Parent, vm: &mut Vm) -> Action {
         match self.command {
             None => {
                 let Some(input) = input.as_symbol() else {
-                    todo!("index didn't get a symbol");
+                    err!(vm, "type error: <list> <index> {}", input.type_name());
                 };
                 if input == Symbol::SET {
                     self.command = Some(Command::Set);
@@ -49,10 +49,10 @@ impl Method for Index {
                         let value = parent.data.remove(index);
                         Action::Output(value)
                     } else {
-                        todo!("removed index out of bounds");
+                        err!(vm, "list index out of bounds");
                     }
                 } else {
-                    todo!("index got unexpected symbol");
+                    err!(vm, "undefined method: <list> <index> .{}", input.name());
                 }
             }
             Some(Command::Set) => {
@@ -61,7 +61,7 @@ impl Method for Index {
                 {
                     parent.data[index] = input;
                 } else {
-                    todo!("removed index out of bounds");
+                    err!(vm, "list index out of bounds");
                 }
                 Action::Stop
             }
@@ -71,7 +71,7 @@ impl Method for Index {
                 {
                     parent.data.insert(index, input);
                 } else {
-                    todo!("removed index out of bounds");
+                    err!(vm, "list index out of bounds");
                 }
                 Action::Stop
             }

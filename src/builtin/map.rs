@@ -2,6 +2,7 @@ mod at;
 mod clear;
 mod copy;
 mod each;
+mod error;
 pub mod from_pairs;
 mod has_key;
 mod keys;
@@ -12,7 +13,7 @@ mod values;
 
 use hashbrown::HashTable;
 
-use crate::builtin::helper;
+use crate::builtin::helper::{self, new_error};
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessRef};
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::value::hashable::HashableValue;
@@ -36,6 +37,8 @@ helper::define_class!(
     HAS_KEY => self::has_key::HasKey,
     UPDATE => self::update::Update,
     COPY => self::copy::Copy,
+    #[no_symbol]
+    ERROR => self::error::Error,
 );
 
 type Entry<'a> = hashbrown::hash_table::Entry<'a, (HashableValue, Value)>;
@@ -100,7 +103,11 @@ impl BuiltinProcessData for Map {
             return BuiltinProcessRef::new(family, Some(process), vm);
         };
         let Some(index) = symbol_to_method_index(cmd) else {
-            todo!("invalid map method");
+            let error = new_error!(vm, "undefined method: <map> {:?}", input);
+            vm.put_temporary1(Value::from(error));
+            let index = *methods::ERROR.get().expect("Map method uninitialized");
+            let family = vm.get_builtin_family(index);
+            return BuiltinProcessRef::new(family, Some(process), vm);
         };
         let family = vm.get_builtin_family(index);
         #[cfg(debug_assertions)]

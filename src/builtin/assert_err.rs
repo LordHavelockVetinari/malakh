@@ -1,4 +1,4 @@
-use crate::builtin::helper::{self, Action, Function};
+use crate::builtin::helper::{self, Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::process::ProcessRef;
 use crate::vm::{Value, Vm};
@@ -23,17 +23,27 @@ impl Function for AssertErr {
     fn input(&mut self, input: Value, vm: &mut Vm) -> helper::Action {
         if let Some(proc) = input.as_any_process_ref() {
             let Some(error) = proc.error(vm) else {
-                todo!("assertion error - not in .Err state");
+                err!(
+                    vm,
+                    "assertion error: process in {} state; expected .Err state",
+                    proc.state(),
+                );
             };
             if let Some(symbol) = self.symbol
                 && !error.matches(symbol)
             {
-                todo!("assertion error - tag doesn't match")
+                err!(vm, cause = error);
             }
             Action::Stop
         } else {
-            if self.symbol.is_some() {
-                todo!("expected a process");
+            if let Some(symbol) = self.symbol {
+                err!(
+                    vm,
+                    "type error: {} {} {}",
+                    Self::NAME,
+                    symbol.type_name(),
+                    input.type_name(),
+                );
             }
             self.symbol = Some(input);
             Action::Input

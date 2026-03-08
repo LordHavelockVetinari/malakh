@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -23,7 +23,7 @@ impl Function for ToFloat {
             result
         } else {
             let Some(s) = input.as_string_ref() else {
-                todo!("ToFloat got bad argument");
+                err!(vm, "type error: {} {}", Self::NAME, input.type_name());
             };
             let s = s.bytes();
             if !s.is_ascii() {

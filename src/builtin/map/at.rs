@@ -1,4 +1,6 @@
-use crate::builtin::helper::{Action, Method};
+use hashbrown::hash_table::Entry;
+
+use crate::builtin::helper::{Action, Method, err};
 use crate::builtin::map::{AbsentEntry, HashableValue};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::symbol::Symbol;
@@ -36,7 +38,7 @@ impl Method for At {
         }
     }
 
-    fn input(&mut self, input: Value, parent: &mut Self::Parent, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, parent: &mut Self::Parent, vm: &mut Vm) -> Action {
         match self.command {
             Command::At => {
                 self.key = Some(input);
@@ -45,7 +47,7 @@ impl Method for At {
             }
             Command::ChooseCommand => {
                 let Some(input) = input.as_symbol() else {
-                    todo!("at didn't get a symbol");
+                    err!(vm, "type error: <map> .At <key> {}", input.type_name());
                 };
                 if input == Symbol::SET {
                     self.command = Command::Set;
@@ -56,7 +58,7 @@ impl Method for At {
                 } else if input == Symbol::REMOVE {
                     let key = self.key.expect("key should be initialized");
                     let Some(key) = HashableValue::new(key) else {
-                        todo!("non-hashable key");
+                        err!(vm, "key {:?} not found", key);
                     };
                     match parent.find_entry(key) {
                         Ok(occupied) => {
@@ -64,16 +66,16 @@ impl Method for At {
                             occupied.remove();
                             Action::Output(value)
                         }
-                        Err(AbsentEntry { .. }) => todo!("remove nonexistent item"),
+                        Err(AbsentEntry { .. }) => err!(vm, "key {:?} not found", key),
                     }
                 } else {
-                    todo!("index got unexpected symbol");
+                    err!(vm, "undefined method: <map> .At <key> .{}", input.name());
                 }
             }
             Command::Set => {
                 let key = self.key.expect("key should be initialized");
                 let Some(key) = HashableValue::new(key) else {
-                    todo!("non-hashable key");
+                    err!(vm, "non-hashable key: {:?}", key);
                 };
                 // Use old key if replacing old entry.
                 parent
@@ -85,12 +87,16 @@ impl Method for At {
             Command::Is => {
                 let key = self.key.expect("key should be initialized");
                 let Some(key) = HashableValue::new(key) else {
-                    todo!("non-hashable key");
+                    err!(vm, "non-hashable key: {:?}", key);
                 };
-                parent
-                    .entry(key)
-                    .and_modify(|_| todo!("`Is` got existing key"))
-                    .or_insert((key, input));
+                match parent.entry(key) {
+                    Entry::Vacant(vacant) => {
+                        vacant.insert((key, input));
+                    }
+                    Entry::Occupied(_) => {
+                        err!(vm, "key {:?} already present", key);
+                    }
+                }
                 Action::Stop
             }
         }

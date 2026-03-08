@@ -11,10 +11,18 @@ use crate::vm::{Instruction, Value, Vm};
 #[error("type error")]
 pub struct TypeError;
 
+#[derive(Clone, Copy, Default)]
+pub enum ErrorPosition {
+    #[default]
+    Unknown,
+    BuiltinProcess(&'static str),
+    Instruction(*const Instruction),
+}
+
 #[derive(Default)]
 pub struct ErrorData {
     values: Rc<Vec<Value>>,
-    instruction_pointer: *const Instruction,
+    position: ErrorPosition,
     cause: Option<ErrorRef>,
 }
 
@@ -53,12 +61,12 @@ impl ErrorRef {
         &mut self.data_mut().values
     }
 
-    pub fn instruction_pointer(&self) -> *const Instruction {
-        self.data().instruction_pointer
+    pub fn position(&self) -> ErrorPosition {
+        self.data().position
     }
 
-    fn instruction_pointer_mut(&mut self) -> &mut *const Instruction {
-        &mut self.data_mut().instruction_pointer
+    fn position_mut(&mut self) -> &mut ErrorPosition {
+        &mut self.data_mut().position
     }
 
     pub fn cause(&self) -> Option<Self> {
@@ -71,7 +79,13 @@ impl ErrorRef {
 
     pub fn new(vm: &mut Vm) -> Self {
         let mut this = unsafe { Self::from_builtin_process(runtime_error::new_process(vm), vm) };
-        *this.instruction_pointer_mut() = vm.instruction_pointer();
+        *this.position_mut() = ErrorPosition::Instruction(vm.instruction_pointer());
+        this
+    }
+
+    pub fn new_from_builtin_family(vm: &mut Vm, family_name: &'static str) -> Self {
+        let mut this = Self::new(vm);
+        *this.position_mut() = ErrorPosition::BuiltinProcess(family_name);
         this
     }
 
@@ -79,6 +93,12 @@ impl ErrorRef {
         let mut this = Self::new(vm);
         *this.values_mut() = Rc::clone(&cause.data().values);
         *this.cause_mut() = Some(cause);
+        this
+    }
+
+    pub fn new_propagated_by_builtin(vm: &mut Vm, family_name: &'static str, cause: Self) -> Self {
+        let mut this = Self::new_propagated(vm, cause);
+        *this.position_mut() = ErrorPosition::BuiltinProcess(family_name);
         this
     }
 
@@ -92,7 +112,7 @@ impl ErrorRef {
 
     pub fn from_string(vm: &mut Vm, s: &str) -> Self {
         let mut error = Self::new(vm);
-        error.extend(Value::string_from_bytes(s.as_bytes(), vm.gc_mut()));
+        error.extend(Value::alloc_from(s, vm.gc_mut()));
         error
     }
 
@@ -120,7 +140,13 @@ impl ErrorRef {
             } else {
                 write!(output, "    rethrown at: ")?;
             }
-            writeln!(output, "{:p}", part.instruction_pointer())?;
+            match part.position() {
+                ErrorPosition::Unknown => writeln!(output, "?")?,
+                ErrorPosition::BuiltinProcess(family_name) => {
+                    writeln!(output, "builtin {}", family_name)?
+                }
+                ErrorPosition::Instruction(instruction) => writeln!(output, "{:p}", instruction)?,
+            }
         }
         Ok(())
     }

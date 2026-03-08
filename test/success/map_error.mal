@@ -1,0 +1,55 @@
+MyMap := [Map::Of
+    "mouse" .Is "small"
+    "elephant" .Is "big"
+]
+
+Main -> {
+    out "MAP"
+    AssertErr { MyMap .Foo }
+    AssertErr { MyMap .Pop }
+    out "AT"
+    AssertStop { MyMap "foo" }
+    AssertErr { [MyMap "foo"] }
+    AssertErr { MyMap "mouse" .Is "big" }
+    AssertStop { MyMap "mouse" .Set "big" }
+    AssertStop { MyMap "mouse" .Remove }
+    AssertErr { MyMap "dog" .Remove }
+    AssertStop { x := [MyMap NaN]; else {} }
+    AssertErr { MyMap NaN .Remove }
+    AssertErr { MyMap NaN .Is "foo" }
+    AssertErr { MyMap NaN .Set "foo" }
+    AssertErr { MyMap .At (-NaN) .Is "foo" }
+    AssertErr { MyMap .At (-NaN) .Set "foo" }
+    AssertErr { MyMap "foo" .Foo }
+    AssertErr { MyMap "elephant" .Foo }
+    AssertErr { MyMap "foo" 1 }
+    AssertErr { MyMap "elephant" 1 }
+    AssertErr { MyMap .At "foo" .Foo }
+    AssertErr { MyMap .At "elephant" .Foo }
+    AssertErr { MyMap .At "foo" 1 }
+    AssertErr { MyMap .At "elephant" 1 }
+    AssertStop { MyMap NaN }
+    AssertStop { MyMap .At NaN }
+    out "FROM_PAIRS"
+    AssertStop { [Map::FromPairs] }
+    AssertErr  { [Map::FromPairs 1] }
+    AssertStop { [Map::FromPairs 1 2] }
+    AssertErr  { [Map::FromPairs 1 2 3] }
+    AssertStop { [Map::FromPairs 1 2 3 4] }
+    AssertErr  { [Map::FromPairs 1 2 3 4 5] }
+    AssertStop { [Map::FromPairs 1 2 3 4 5 6] }
+    AssertErr  { [Map::FromPairs NaN 1] }
+    AssertStop { [Map::FromPairs 1 NaN] }
+    out "OF"
+    AssertStop { [Map::Of] }
+    AssertErr  { [Map::Of 1] }
+    AssertErr  { [Map::Of 1 .Is] }
+    AssertStop { [Map::Of 1 .Is 2] }
+    AssertErr  { [Map::Of NaN .Is 1] }
+    AssertStop { [Map::Of 1 .Is NaN] }
+    out "UPDATE"
+    AssertErr { MyMap .Update "whale" "huge" NaN "what" }
+    Assert ([MyMap "whale"] == "huge")
+    Assert ([MyMap .Length] == 2)
+    out "DONE"
+}

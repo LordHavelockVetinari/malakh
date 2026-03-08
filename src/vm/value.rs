@@ -84,7 +84,7 @@ impl Value {
     }
 
     pub fn is_nan(self) -> bool {
-        self.as_float_ref().is_some_and(|f| f.value().is_nan())
+        self.as_f64().is_some_and(f64::is_nan)
     }
 
     pub fn is_user_process(self) -> bool {
@@ -236,10 +236,6 @@ impl Value {
                 })
                 .cast::<CaptureData>(),
         ))
-    }
-
-    pub fn string_from_bytes(bytes: &[u8], gc: &mut GarbageCollector) -> Self {
-        Self::from(StringRef::new(bytes, gc))
     }
 
     pub fn as_user_process_ref(self) -> Option<UserProcessRef> {
@@ -497,17 +493,8 @@ impl Value {
             write!(output, "{}", n)
         } else if let Some(n) = self.as_big_int_ref() {
             write!(output, "{}", unsafe { n.value().as_ref().unwrap() })
-        } else if let Some(x) = self.as_f64() {
-            if x.is_finite() {
-                output.write_all(ryu::Buffer::new().format_finite(x).as_bytes())
-            } else if x.is_nan() {
-                output.write_all(b"NaN")
-            } else if x == f64::INFINITY {
-                output.write_all(b"Infinity")
-            } else {
-                debug_assert!(x == -f64::INFINITY);
-                output.write_all(b"-Infinity")
-            }
+        } else if let Some(f) = self.as_float_ref() {
+            write!(output, "{}", f.to_str(&mut ryu::Buffer::new()))
         } else if let Some(sym) = self.as_symbol() {
             write!(output, "{}", sym.name())
         } else if let Some(proc) = self.as_user_process_ref() {
@@ -534,8 +521,8 @@ impl Debug for Value {
             write!(f, "{}", n)
         } else if let Some(n) = self.as_big_int_ref() {
             write!(f, "{}", unsafe { n.value().as_ref().unwrap() })
-        } else if let Some(x) = self.as_f64() {
-            write!(f, "{}", x)
+        } else if let Some(fr) = self.as_float_ref() {
+            write!(f, "{}", fr.to_str(&mut ryu::Buffer::new()))
         } else if let Some(sym) = self.as_symbol() {
             write!(f, ".{}", sym.name())
         } else if let Some(proc) = self.as_user_process_ref() {
@@ -727,6 +714,24 @@ impl AllocIntoValue for Integer {
 impl AllocIntoValue for f64 {
     fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
         Value::from(FloatRef::new(self, gc))
+    }
+}
+
+impl AllocIntoValue for &'_ [u8] {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        Value::from(StringRef::new(self, gc))
+    }
+}
+
+impl AllocIntoValue for &'_ str {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        Value::alloc_from(self.as_bytes(), gc)
+    }
+}
+
+impl AllocIntoValue for String {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        Value::alloc_from(&self[..], gc)
     }
 }
 

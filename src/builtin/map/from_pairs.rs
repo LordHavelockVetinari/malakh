@@ -1,4 +1,4 @@
-use crate::builtin::helper::{self, Action};
+use crate::builtin::helper::{self, Action, err};
 use crate::vm::builtin_process::BuiltinProcessRef;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::value::hashable::HashableValue;
@@ -38,11 +38,11 @@ impl helper::Function for FromPairs {
         }
     }
 
-    fn input(&mut self, input: Value, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         match self.current_key {
             None => {
                 let Some(key) = HashableValue::new(input) else {
-                    todo!("non-hashable key");
+                    err!(vm, "non-hashable key: {:?}", input);
                 };
                 self.current_key = Some(key);
                 Action::Input

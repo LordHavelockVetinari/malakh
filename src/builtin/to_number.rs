@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -20,7 +20,7 @@ impl Function for ToNumber {
             return Action::Output(input);
         }
         let Some(s) = input.as_string_ref() else {
-            panic!("ToNumber got bad argument");
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         let Ok(s) = str::from_utf8(s.bytes()) else {
             return Action::Stop;

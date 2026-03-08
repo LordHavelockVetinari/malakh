@@ -12,4 +12,22 @@ Main -> {
     out [String::Lines "Foo\r\nBar\nBaz"]...
     out [String::Length [String::Lines "Foo\r\nBar\nBaz"]]
     out [String::FromLines 1 2 "3\n4"]
+
+    AssertErr { String::Bytes 1 }
+    AssertErr { String::FromBytes 1000 }
+    AssertErr { String::FromBytes (-1) }
+    AssertErr { String::FromBytes 999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999 }
+    AssertErr { String::FromBytes "" }
+    AssertErr { String::Length 1 }
+    AssertErr { String::Lines 1 }
+    AssertErr { String::Slice 1 }
+    AssertErr { String::Slice "" .Foo }
+    AssertErr { String::Slice "" .To "" }
+    AssertErr { String::Slice "" .Step 1 }
+    AssertErr { String::Slice "" .To 1 .To 1 }
+    AssertErr { String::Slice "" .From 1 .From 1 }
+    AssertErr { [String::Slice "a"] }
+    AssertErr { String::Words 1 }
+    AssertErr { String::Words "\xff" }
+    AssertErr { String::Words "\x80" }
 }

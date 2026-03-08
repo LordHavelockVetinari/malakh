@@ -1,6 +1,6 @@
 use either::Either::{Left, Right};
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -31,7 +31,7 @@ impl Function for Abs {
             };
             Action::Output(result)
         } else {
-            todo!("type error")
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         }
     }
 }

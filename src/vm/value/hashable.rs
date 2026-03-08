@@ -1,3 +1,4 @@
+use std::fmt::{self, Debug};
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use malachite::Integer;
@@ -6,7 +7,7 @@ use malachite::base::rounding_modes::RoundingMode;
 
 use crate::vm::Value;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct HashableValue(Value);
 
 fn hash<T: Hash + ?Sized>(x: &T) -> u64 {
@@ -64,5 +65,11 @@ impl HashableValue {
             }
             Value::CAPTURE_TAG | 8.. => unreachable!(),
         }
+    }
+}
+
+impl Debug for HashableValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Debug::fmt(&self.0, f)
     }
 }

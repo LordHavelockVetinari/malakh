@@ -1,4 +1,5 @@
 use crate::vm::builtin_process::{BuiltinProcessData, BuiltinProcessRef};
+use crate::vm::error::ErrorRef;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
@@ -7,6 +8,7 @@ pub enum Action {
     Input,
     OptionalInput,
     Output(Value),
+    Error(ErrorRef),
     Stop,
 }
 
@@ -31,6 +33,11 @@ pub trait Function: Sized {
         let _ = vm;
         Action::Stop
     }
+
+    fn after_error(&mut self, vm: &mut Vm) -> Action {
+        let _ = vm;
+        Action::Stop
+    }
 }
 
 #[repr(transparent)]
@@ -51,6 +58,10 @@ impl<T: Function> BuiltinProcessData for AsFunction<T> {
             Action::Output(x) => {
                 *process.state_mut() = ProcessState::Out;
                 *process.output_slot_mut() = x;
+            }
+            Action::Error(err) => {
+                *process.state_mut() = ProcessState::Err;
+                *process.output_slot_mut() = Value::from(err);
             }
             Action::Stop => *process.state_mut() = ProcessState::Stop,
         }
@@ -80,6 +91,10 @@ impl<T: Function> BuiltinProcessData for AsFunction<T> {
                         *process.output_slot_mut() = output;
                         *process.state_mut() = ProcessState::Out;
                     }
+                    Error(err) => {
+                        *process.output_slot_mut() = Value::from(err);
+                        *process.state_mut() = ProcessState::Err;
+                    }
                     Stop => {
                         *process.state_mut() = ProcessState::Stop;
                     }
@@ -100,6 +115,10 @@ impl<T: Function> BuiltinProcessData for AsFunction<T> {
                         *process.output_slot_mut() = output;
                         *process.state_mut() = ProcessState::Out;
                     }
+                    Error(err) => {
+                        *process.output_slot_mut() = Value::from(err);
+                        *process.state_mut() = ProcessState::Err;
+                    }
                     Stop => {
                         *process.state_mut() = ProcessState::Stop;
                     }
@@ -114,6 +133,28 @@ impl<T: Function> BuiltinProcessData for AsFunction<T> {
                 }
                 Output(output) => {
                     *process.output_slot_mut() = output;
+                }
+                Error(err) => {
+                    *process.output_slot_mut() = Value::from(err);
+                    *process.state_mut() = ProcessState::Err;
+                }
+                Stop => {
+                    *process.state_mut() = ProcessState::Stop;
+                }
+            },
+            ProcessState::Err => match this.after_error(vm) {
+                Input => {
+                    *process.state_mut() = ProcessState::In;
+                }
+                OptionalInput => {
+                    *process.state_mut() = ProcessState::OptIn;
+                }
+                Output(output) => {
+                    *process.output_slot_mut() = output;
+                    *process.state_mut() = ProcessState::Out;
+                }
+                Error(err) => {
+                    *process.output_slot_mut() = Value::from(err);
                 }
                 Stop => {
                     *process.state_mut() = ProcessState::Stop;
@@ -170,6 +211,8 @@ pub type AsBasicAggregator<T> = AsFunction<AggregatorToFunction<T>>;
 pub trait Method: Sized {
     type Parent: BuiltinProcessData;
 
+    const NAME: &str = Self::Parent::NAME;
+
     fn new(parent: &mut Self::Parent, vm: &mut Vm) -> (Self, Action);
 
     fn gc_mark_content(&self, gc: &mut GarbageCollector);
@@ -188,6 +231,11 @@ pub trait Method: Sized {
         let _ = (parent, vm);
         Action::Stop
     }
+
+    fn after_error(&mut self, parent: &mut Self::Parent, vm: &mut Vm) -> Action {
+        let _ = (parent, vm);
+        Action::Stop
+    }
 }
 
 #[repr(C)]
@@ -197,7 +245,7 @@ pub struct AsMethod<T> {
 }
 
 impl<T: Method> BuiltinProcessData for AsMethod<T> {
-    const NAME: &str = T::Parent::NAME;
+    const NAME: &str = T::NAME;
 
     unsafe fn init(mut process: BuiltinProcessRef, parent: Option<BuiltinProcessRef>, vm: &mut Vm) {
         let mut parent = parent.expect("child process should have a parent");
@@ -214,6 +262,10 @@ impl<T: Method> BuiltinProcessData for AsMethod<T> {
             Action::Output(x) => {
                 *process.state_mut() = ProcessState::Out;
                 *process.output_slot_mut() = x;
+            }
+            Action::Error(err) => {
+                *process.state_mut() = ProcessState::Err;
+                *process.output_slot_mut() = Value::from(err);
             }
             Action::Stop => *process.state_mut() = ProcessState::Stop,
         }
@@ -249,6 +301,10 @@ impl<T: Method> BuiltinProcessData for AsMethod<T> {
                         *process.output_slot_mut() = output;
                         *process.state_mut() = ProcessState::Out;
                     }
+                    Action::Error(err) => {
+                        *process.output_slot_mut() = Value::from(err);
+                        *process.state_mut() = ProcessState::Err;
+                    }
                     Stop => {
                         *process.state_mut() = ProcessState::Stop;
                     }
@@ -269,6 +325,10 @@ impl<T: Method> BuiltinProcessData for AsMethod<T> {
                         *process.output_slot_mut() = output;
                         *process.state_mut() = ProcessState::Out;
                     }
+                    Action::Error(err) => {
+                        *process.output_slot_mut() = Value::from(err);
+                        *process.state_mut() = ProcessState::Err;
+                    }
                     Stop => {
                         *process.state_mut() = ProcessState::Stop;
                     }
@@ -283,6 +343,28 @@ impl<T: Method> BuiltinProcessData for AsMethod<T> {
                 }
                 Output(output) => {
                     *process.output_slot_mut() = output;
+                }
+                Error(err) => {
+                    *process.output_slot_mut() = Value::from(err);
+                    *process.state_mut() = ProcessState::Err;
+                }
+                Stop => {
+                    *process.state_mut() = ProcessState::Stop;
+                }
+            },
+            ProcessState::Err => match data.after_error(parent, vm) {
+                Input => {
+                    *process.state_mut() = ProcessState::In;
+                }
+                OptionalInput => {
+                    *process.state_mut() = ProcessState::OptIn;
+                }
+                Output(output) => {
+                    *process.output_slot_mut() = output;
+                    *process.state_mut() = ProcessState::Out;
+                }
+                Error(err) => {
+                    *process.output_slot_mut() = Value::from(err);
                 }
                 Stop => {
                     *process.state_mut() = ProcessState::Stop;
@@ -334,4 +416,37 @@ macro_rules! define_class {
     };
 }
 
-pub(crate) use {_define_class_symbol, define_class};
+macro_rules! new_error {
+    ($vm:ident, cause = $cause:expr $(,)?) => {
+        {
+            //let vm = $vm;
+            let error = $crate::vm::error::ErrorRef::new_propagated_by_builtin($vm, Self::NAME, $cause);
+            error
+        }
+    };
+    ($vm:ident, $($fmt:tt)*) => {
+        {
+            let mut error = $crate::vm::error::ErrorRef::new_from_builtin_family($vm, Self::NAME);
+            error.extend($crate::vm::Value::alloc_from(std::format!($($fmt)*), $vm.gc_mut()));
+            error
+        }
+    };
+}
+
+macro_rules! err {
+    ($vm:ident, self = $this:expr, $($t:tt)*) => {
+        {
+            return (
+                $this,
+                $crate::builtin::helper::Action::Error($crate::builtin::helper::new_error!($vm, $($t)*))
+            );
+        }
+    };
+    ($vm:ident, $($t:tt)*) => {
+        {
+            return $crate::builtin::helper::Action::Error($crate::builtin::helper::new_error!($vm, $($t)*));
+        }
+    };
+}
+
+pub(crate) use {_define_class_symbol, define_class, err, new_error};

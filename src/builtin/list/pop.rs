@@ -1,4 +1,4 @@
-use crate::builtin::helper::{Action, Method};
+use crate::builtin::helper::{Action, Method, err};
 use crate::vm::gc::GarbageCollector;
 
 pub struct Pop;
@@ -6,9 +6,9 @@ pub struct Pop;
 impl Method for Pop {
     type Parent = super::List;
 
-    fn new(parent: &mut Self::Parent, _vm: &mut crate::vm::Vm) -> (Self, Action) {
+    fn new(parent: &mut Self::Parent, vm: &mut crate::vm::Vm) -> (Self, Action) {
         let Some(result) = parent.data.pop() else {
-            todo!(".Pop in empty list");
+            err!(vm, self = Self, "cannot pop empty list");
         };
         (Self, Action::Output(result))
     }

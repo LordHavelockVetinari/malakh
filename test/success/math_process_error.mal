@@ -1,0 +1,45 @@
+Main -> {
+    AssertErr { Math::Abs "" }
+    AssertErr { Math::Acos "" }
+    AssertErr { Math::Acot "" }
+    AssertErr { Math::Asin "" }
+    AssertErr { Math::Atan "" }
+    AssertErr { Math::Atan2 "" }
+    AssertErr { Math::Atan2 1 "" }
+    AssertErr { Math::Cbrt "" }
+    AssertErr { Math::Ceil "" }
+    AssertErr { Math::Ceil Infinity }
+    AssertErr { Math::Ceil (-Infinity) }
+    AssertErr { Math::Ceil NaN }
+    AssertErr { Math::Cos "" }
+    AssertErr { Math::Cot "" }
+    AssertErr { Math::Exp "" }
+    AssertErr { Math::Floor "" }
+    AssertErr { Math::Floor Infinity }
+    AssertErr { Math::Floor (-Infinity) }
+    AssertErr { Math::Floor NaN }
+    AssertErr { Math::Log "" }
+    AssertErr { Math::Mean "" }
+    AssertErr { Math::Mean 1 2 3 "" }
+    AssertErr { [Math::Mean] }
+    AssertErr { Math::Norm "" }
+    AssertErr { Math::Norm 1 2 3 "" }
+    AssertErr { Math::Product "" }
+    AssertErr { Math::Product 1 2 3 "" }
+    AssertErr { Math::Round "" }
+    AssertErr { Math::Round Infinity }
+    AssertErr { Math::Round (-Infinity) }
+    AssertErr { Math::Round NaN }
+    AssertErr { Math::Sin "" }
+    AssertErr { Math::Sqrt "" }
+    AssertErr { Math::Tan "" }
+    AssertErr { Min {} }
+    AssertErr { Min 1 2 3 "" }
+    AssertErr { [Min] }
+    AssertErr { Max {} }
+    AssertErr { Max 1 2 3 "" }
+    AssertErr { [Max] }
+    AssertErr { Sum {} }
+    AssertErr { Sum 1 2 3 "" }
+    out "DONE"
+}

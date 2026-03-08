@@ -1,0 +1,16 @@
+Main -> {
+    AssertStop { List 10 }
+    AssertStop { List (-1) }
+    AssertErr { [List 10] }
+    AssertErr { List 10 .Set 5 }
+    AssertErr { List 0 .Set 5 }
+    AssertErr { List (-1) .Set 5 }
+    AssertStop { List 0 .Insert 1 }
+    AssertErr { List 1 .Insert 1 }
+    AssertErr { List (-1) .Insert 1 }
+    AssertErr { List 0 .Remove }
+    AssertErr { List (-1) .Remove }
+    AssertErr { List 0 .Foobar }
+    AssertErr { List .Pop }
+    out "DONE"
+}

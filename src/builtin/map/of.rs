@@ -1,4 +1,4 @@
-use crate::builtin::helper::{self, Action};
+use crate::builtin::helper::{self, Action, err};
 use crate::vm::builtin_process::BuiltinProcessRef;
 use crate::vm::gc::GarbageCollector;
 use crate::vm::symbol::Symbol;
@@ -46,11 +46,11 @@ impl helper::Function for Of {
         }
     }
 
-    fn input(&mut self, input: Value, _vm: &mut Vm) -> Action {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         match self.mode {
             Mode::ExpectKey => {
                 let Some(key) = HashableValue::new(input) else {
-                    todo!("non-hashable key");
+                    err!(vm, "non-hashable key: {:?}", input);
                 };
                 self.mode = Mode::ExpectIs(key);
                 Action::Input
@@ -62,7 +62,7 @@ impl helper::Function for Of {
                     self.mode = Mode::ExpectValue(key);
                     Action::Input
                 } else {
-                    todo!("expected symbol .Is");
+                    err!(vm, "expected symbol .Is");
                 }
             }
             Mode::ExpectValue(key) => {

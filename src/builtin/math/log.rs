@@ -1,6 +1,6 @@
 use std::f64::consts;
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -20,7 +20,16 @@ impl Function for Log {
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(x) = input.number_to_f64() else {
-            todo!("type error");
+            if self.arg1.is_some() {
+                err!(
+                    vm,
+                    "type error: {} Number {}",
+                    Self::NAME,
+                    input.type_name()
+                );
+            } else {
+                err!(vm, "type error: {} {}", Self::NAME, input.type_name());
+            }
         };
         if let Some(base) = self.arg1 {
             let result = match base {

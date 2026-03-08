@@ -1,4 +1,4 @@
-use crate::builtin::helper::{self, Action, Function};
+use crate::builtin::helper::{self, Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::{Value, Vm};
@@ -14,13 +14,19 @@ impl Function for AssertStop {
 
     fn gc_mark_content(&self, _gc: &mut GarbageCollector) {}
 
-    fn input(&mut self, input: Value, _vm: &mut Vm) -> helper::Action {
+    fn input(&mut self, input: Value, vm: &mut Vm) -> helper::Action {
         let Some(proc) = input.as_any_process_ref() else {
-            todo!("expected a process");
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         if proc.state() != ProcessState::Stop {
-            // On error, should re-raise the same error.
-            todo!("state was not .Stop");
+            if let Some(error) = proc.error(vm) {
+                err!(vm, cause = error);
+            }
+            err!(
+                vm,
+                "assertion error: process in {} state; expected .Stop state",
+                proc.state(),
+            );
         }
         Action::Stop
     }

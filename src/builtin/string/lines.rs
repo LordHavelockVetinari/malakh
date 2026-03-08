@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
@@ -52,7 +52,7 @@ impl Function for Lines {
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(owner) = input.as_string_ref() else {
-            todo!("String::Words did not get a string");
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         self.owner = Some(owner);
         self.data = NonNull::from(owner.bytes());

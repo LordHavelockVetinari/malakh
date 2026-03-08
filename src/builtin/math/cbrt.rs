@@ -1,4 +1,4 @@
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::{Value, Vm};
 
@@ -15,7 +15,7 @@ impl Function for Cbrt {
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(x) = input.number_to_f64() else {
-            todo!("type error");
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         Action::Output(Value::alloc_from(x.cbrt(), vm.gc_mut()))
     }

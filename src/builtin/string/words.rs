@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::builtin::helper::{Action, Function};
+use crate::builtin::helper::{Action, Function, err};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
@@ -40,11 +40,11 @@ impl Function for Words {
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
         let Some(owner) = input.as_string_ref() else {
-            todo!("String::Words did not get a string");
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         self.owner = Some(owner);
         let Ok(s) = str::from_utf8(owner.bytes()) else {
-            todo!("String::Words did not get a valid UTF-8 string")
+            err!(vm, "invalid UTF-8 string");
         };
         self.data = NonNull::from(s);
         match self.next() {
