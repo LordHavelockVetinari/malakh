@@ -79,7 +79,6 @@ Hopefully, they will all be added soon:
 - Assignment to `_`.
 - try-finally.
 - Binary and hexadecimal numbers.
-- The exponentiation operator (`^`).
 - `Data::Count`.
 - `MinHeap` and `MaxHeap`.
 - `String::FromCharCodes`, `String::CharCodes`.

@@ -6,7 +6,7 @@ use either::Either::{Left, Right};
 
 use crate::vm::builtin_process::BuiltinProcessRef;
 use crate::vm::capture::CaptureRef;
-use crate::vm::error::ErrorRef;
+use crate::vm::error::{ErrorRef, PowerError};
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::user_process::UserProcessRef;
 use crate::vm::{Value, throw_from_current_process};
@@ -223,9 +223,28 @@ fn run_remainder(vm: &mut Vm, inst: Instruction) {
     *vm.register_mut(dst) = result;
 }
 
-fn run_power(_vm: &mut Vm, inst: Instruction) {
+fn run_power(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), POWER);
-    todo!();
+    let (dst, src1, src2) = inst.as_three_operand();
+    let src1 = vm.register(src1);
+    let src2 = vm.register(src2);
+    match Value::power(src1, src2, &mut vm.gc) {
+        Ok(result) => *vm.register_mut(dst) = result,
+        Err(PowerError::NegativeExponent) => {
+            throw_from_current_process!(vm, "negative exponent: {:?} ^ {:?}", src1, src2)
+        }
+        Err(PowerError::Overflow) => {
+            throw_from_current_process!(vm, "exponent too large: {:?} ^ {:?}", src1, src2)
+        }
+        Err(PowerError::TypeError) => {
+            throw_from_current_process!(
+                vm,
+                "type error: {} ^ {}",
+                src1.type_name(),
+                src2.type_name(),
+            );
+        }
+    }
 }
 
 fn run_unary_plus(vm: &mut Vm, inst: Instruction) {

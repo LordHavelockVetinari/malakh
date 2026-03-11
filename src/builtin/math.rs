@@ -15,6 +15,7 @@ pub mod is_infinite;
 pub mod is_nan;
 pub mod log;
 pub mod mean;
+pub mod mod_pow;
 pub mod norm;
 pub mod product;
 pub mod round;

@@ -11,6 +11,12 @@ use crate::vm::{Instruction, Value, Vm};
 #[error("type error")]
 pub struct TypeError;
 
+pub enum PowerError {
+    TypeError,
+    NegativeExponent,
+    Overflow,
+}
+
 #[derive(Clone, Copy, Default)]
 pub enum ErrorPosition {
     #[default]

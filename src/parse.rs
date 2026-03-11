@@ -847,7 +847,10 @@ impl Parser {
             let location = self.token_at(0)?.1.clone();
             let expr = self.parse_expr()?;
             if let ExprType::ProcessLiteral(stmts) = &expr.0 {
-                return Ok(Rc::new(Stmt(StmtType::BareBlock(stmts.to_vec()), expr.1.clone())));
+                return Ok(Rc::new(Stmt(
+                    StmtType::BareBlock(stmts.to_vec()),
+                    expr.1.clone(),
+                )));
             }
             Ok(Rc::new(Stmt(StmtType::Expr(expr), location)))
         }

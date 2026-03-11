@@ -6,6 +6,7 @@ use std::ptr::{self, NonNull};
 
 use either::Either::{self, Left, Right};
 use malachite::Integer;
+use malachite::base::num::arithmetic::traits::{Parity, Pow};
 use malachite::base::num::basic::traits::Zero;
 use malachite::base::num::conversion::traits::RoundingFrom;
 use malachite::base::rounding_modes::RoundingMode;
@@ -13,7 +14,7 @@ use malachite::base::rounding_modes::RoundingMode;
 use crate::vm::big_int::{BigIntInner, BigIntRef};
 use crate::vm::builtin_process::{BuiltinProcessHeader, BuiltinProcessRef};
 use crate::vm::capture::{CaptureData, CaptureRef};
-use crate::vm::error::TypeError;
+use crate::vm::error::{PowerError, TypeError};
 use crate::vm::float::{FloatData, FloatRef};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::process::AnyProcessRef;
@@ -316,6 +317,25 @@ impl Value {
             })
     }
 
+    pub fn int_to_integer(&self) -> Option<Integer> {
+        self.as_int().map(|either| match either {
+            Left(small) => Integer::from(small),
+            Right(big) => big.clone(),
+        })
+    }
+
+    pub fn int_to_i32(&self) -> Option<i32> {
+        const ALWAYS_SMALL: bool = (Value::MIN_SMALL_INT as i128) <= i32::MIN as i128
+            && Value::MAX_SMALL_INT as i128 >= i32::MAX as i128;
+        if ALWAYS_SMALL {
+            return self.as_small_int().and_then(|n| i32::try_from(n).ok());
+        }
+        self.as_int().and_then(|either| match either {
+            Left(small) => i32::try_from(small).ok(),
+            Right(big) => i32::try_from(big).ok(),
+        })
+    }
+
     pub fn add(self, other: Value, gc: &mut GarbageCollector) -> Result<Value, TypeError> {
         if let (Some(n1), Some(n2)) = (self.as_int(), other.as_int()) {
             match (n1, n2) {
@@ -437,6 +457,77 @@ impl Value {
         } else {
             let x = self.as_f64().ok_or(TypeError)?;
             Ok(Self::alloc_from(-x, gc))
+        }
+    }
+
+    pub fn power(self, other: Self, gc: &mut GarbageCollector) -> Result<Self, PowerError> {
+        if let Some(exp) = other.as_f64() {
+            if let Some(base) = self.number_to_f64() {
+                Ok(Self::alloc_from(base.powf(exp), gc))
+            } else {
+                Err(PowerError::TypeError)
+            }
+        } else if let Some(base) = self.as_f64() {
+            if let Some(exp) = other.as_small_int()
+                && let Ok(exp) = i32::try_from(exp)
+            {
+                Ok(Self::alloc_from(base.powi(exp), gc))
+            } else if let Some(exp) = other.number_to_f64() {
+                let mut result = base.powf(exp);
+                if base < 0.0 {
+                    let even = match other.as_int().unwrap() {
+                        Left(n) => n % 2 == 0,
+                        Right(n) => n.even(),
+                    };
+                    let sign = if even { 1.0 } else { -1.0 };
+                    result = result.copysign(sign);
+                }
+                Ok(Self::alloc_from(result, gc))
+            } else {
+                Err(PowerError::TypeError)
+            }
+        } else if let Some(base) = self.int_to_integer() {
+            if let Some(exp) = other.int_to_i32() {
+                if exp < 0 {
+                    if base == 1 {
+                        Ok(self)
+                    } else if base == -1 {
+                        if exp % 2 == 0 {
+                            Ok(Self::ONE)
+                        } else {
+                            Ok(self)
+                        }
+                    } else {
+                        Err(PowerError::NegativeExponent)
+                    }
+                } else {
+                    Ok(Self::alloc_from(base.pow(exp as u64), gc))
+                }
+            } else if let Some(exp) = other.as_int() {
+                if base == 0 || base == 1 {
+                    Ok(self)
+                } else if base == -1 {
+                    let even = match exp {
+                        Left(exp) => exp % 2 == 0,
+                        Right(exp) => exp.even(),
+                    };
+                    if even { Ok(Self::ONE) } else { Ok(self) }
+                } else {
+                    let negative = match exp {
+                        Left(exp) => exp < 0,
+                        Right(exp) => *exp < 0,
+                    };
+                    if negative {
+                        Err(PowerError::NegativeExponent)
+                    } else {
+                        Err(PowerError::Overflow)
+                    }
+                }
+            } else {
+                Err(PowerError::TypeError)
+            }
+        } else {
+            Err(PowerError::TypeError)
         }
     }
 
