@@ -1,0 +1,34 @@
+// Diffie-Hellman Algorithm.
+//
+// Alice and Bob agree on a secret key,
+// without anyone being able to guess their key by snooping on their communication.
+// In the end, Alice and Bob both print the key.
+
+// Global Diffie-Hellman parameters.
+P := 13232376895198612407547930718267435757728527029623408872245156039757713029036368719146452186041204237350521785240337048752071462798273003935646236777459223
+G := 5421644057436475141609648488325705128047428394380474376834667300766108262613900542681289080713724597310673074119355136085795982097390670890367185141189796
+
+Alice := {
+    a := [Random .Int P]
+    x := [Math::ModPow G a P]
+    out x
+    y := in
+    key := [Math::ModPow y a P]
+    User [Cat "Alice's key is: " key]
+}
+
+Bob := {
+    b := [Random .Int P]
+    y := [Math::ModPow G b P]
+    out y
+    x := in
+    key := [Math::ModPow x b P]
+    User [Cat "Bob's key is:   " key]
+}
+
+Main -> {
+    x := [Alice]
+    y := [Bob]
+    Alice y
+    Bob x
+}

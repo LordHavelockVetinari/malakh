@@ -1,0 +1,27 @@
+// Print the poem "99 Bottles of Beer".
+
+Bottles -> {
+    n := in
+    switch n {
+    
+    case 0:
+        out "no more bottles"
+    
+    case 1:
+        out "1 bottle"
+    
+    default:
+        out [Cat n " bottles"]
+    
+    }
+}
+
+Main -> {
+    while i := [Range 99 .Step (-1) .Through 1] {
+        out [Cat [Bottles i] " of beer on the wall"]
+        out [Cat [Bottles i] " of beer"]
+        out "Take one down, pass it around"
+        out [Cat [Bottles (i - 1)] " of beer on the wall"]
+        if i != 1 { out "" }
+    }
+}
