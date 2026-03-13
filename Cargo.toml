@@ -5,10 +5,12 @@ edition = "2024"
 
 [dependencies]
 assert_matches = "1.5.0"
+bytemuck = "1.25.0"
 clap = { version = "4.5.48", features = ["derive"] }
 either = "1.15.0"
+fastrand = "2.3.0"
 hashbrown = "0.16.1"
-malachite = "0.6.1"
+malachite = { version = "0.6.1", features = ["malachite-nz"] }
 ryu = "1.0.20"
 thiserror = "2.0.12"
 

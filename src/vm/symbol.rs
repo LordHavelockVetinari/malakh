@@ -94,4 +94,8 @@ builtin_symbols!(
     HAS_KEY = .HasKey,
     UPDATE = .Update,
     COPY = .Copy,
+    INT = .Int,
+    URN = .Urn,
+    SEED = .Seed,
+    SET_SEED = .SetSeed,
 );

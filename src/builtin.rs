@@ -26,6 +26,7 @@ mod max;
 mod min;
 mod process;
 mod queue;
+mod random;
 mod range;
 pub mod runtime_error;
 mod stack;
@@ -191,6 +192,7 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_module_to_root("Map")
         .add_type::<AsFunction<map::of::Of>>("Map")
         .add_type::<AsFunction<map::from_pairs::FromPairs>>("Map")
+        .add_type_init::<random::Random>(ROOT_PATH, random::init)
         .add_module_to_root("Math")
         .add_constant("Math", "Pi", constants::pi)
         .add_constant("Math", "E", constants::e)

@@ -1,0 +1,20 @@
+Urn := Random .Urn
+
+Main -> {
+    Urn 1 2 3 4
+    out [Sum [Urn]...]
+    AssertErr { [Urn] }
+    Urn 1 2 3 4
+    out [Math::Product [Urn]...]
+    AssertErr { [Urn] }
+    Urn 3
+    out [Urn]
+
+    mean := Math::Mean
+    while i := [Range 1000] {
+        Urn 1 2 3
+        mean [Urn]
+        while _ := [Urn] {}
+    }
+    Assert (1.8 < [mean] and [mean] < 2.2)
+}

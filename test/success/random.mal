@@ -1,0 +1,83 @@
+MeanStd -> {
+    mean := Math::Mean
+    sqMean := Math::Mean
+    while x := in {
+        mean x
+        sqMean (x ^ 2)
+    }
+    out [mean] [Math::Sqrt ([sqMean] - [mean]^2)]
+}
+
+Test1 -> {
+    rng := Random
+    meanStd := MeanStd
+    while i := [Range 1000] {
+        meanStd [rng .Int 1 .Through 6]
+    }
+    mean, std := [meanStd]
+    Assert (3.2 < mean and mean < 3.8)
+    Assert (1.55 < std and std < 1.85)
+    out "Test 1 OK"
+}
+
+Test2 -> {
+    rng := Random
+    meanStd := MeanStd
+    while i := [Range 1000] {
+        meanStd [rng .Int 6]
+    }
+    mean, std := [meanStd]
+    Assert (2.2 < mean and mean < 2.8)
+    Assert (1.55 < std and std < 1.85)
+    out "Test 2 OK"
+}
+
+Test3 -> {
+    rng := Random
+    meanStd := MeanStd
+    while i := [Range 1000] {
+        meanStd [rng 1 .Through 6]
+    }
+    mean, std := [meanStd]
+    Assert (3.2 < mean and mean < 3.8)
+    Assert (1.2 < std and std < 1.7)
+    out "Test 3 OK"
+}
+
+Test4 -> {
+    rng := Random
+    meanStd := MeanStd
+    while i := [Range 1000] {
+        meanStd [rng 6]
+    }
+    mean, std := [meanStd]
+    Assert (2.7 < mean and mean < 3.3)
+    Assert (1.55 < std and std < 1.95)
+    out "Test 4 OK"
+}
+
+Test5 -> {
+    rng := Random
+    min := 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    mid := 15000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    max := 20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    count := 0
+    while i := [Range 1000] {
+        if [Random .Int min .To max] < mid {
+            count += 1
+        }
+    }
+    Assert (400 < count and count < 600)
+    out "Test 5 OK"
+}
+
+Test6 -> {
+    big := 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    Assert ([Random .Int big .Through big] == big)
+    AssertErr (Random .Int big .To big)
+    out "Test 6 OK"
+}
+
+Main -> {
+    out [Test1] [Test2] [Test3] [Test4] [Test5] [Test6]
+}

@@ -1,0 +1,39 @@
+Huge := 340282366920938463463374607431768211456
+
+Main -> {
+    rng1 := Random
+    rng2 := Random
+    rng3 := Random
+    {
+        a, b, c := [rng1 Huge], [rng2 Huge], [rng3 Huge]
+        Assert (a != b)
+        Assert (a != c)
+        Assert (b != c)
+    }
+    rng1 .SetSeed 42
+    rng2 .SetSeed 42
+    rng3 .SetSeed 43
+    {
+        a, b, c := [rng1 Huge], [rng2 Huge], [rng3 Huge]
+        Assert (a == b)
+        Assert (a != c)
+        Assert (b != c)
+    }
+    rng2 .SetSeed [rng3 .Seed]
+    {
+        a, b, c := [rng1 Huge], [rng2 Huge], [rng3 Huge]
+        Assert (a != b)
+        Assert (a != c)
+        Assert (b == c)
+    }
+    rng1 .SetSeed "foo"
+    rng2 .SetSeed "bar"
+    rng3 .SetSeed "foo"
+    {
+        a, b, c := [rng1 Huge], [rng2 Huge], [rng3 Huge]
+        Assert (a != b)
+        Assert (a == c)
+        Assert (b != c)
+    }
+    out "OK"
+}

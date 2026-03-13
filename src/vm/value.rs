@@ -336,6 +336,13 @@ impl Value {
         })
     }
 
+    pub fn int_to_u64(&self) -> Option<u64> {
+        self.as_int().and_then(|either| match either {
+            Left(small) => u64::try_from(small).ok(),
+            Right(big) => u64::try_from(big).ok(),
+        })
+    }
+
     pub fn add(self, other: Value, gc: &mut GarbageCollector) -> Result<Value, TypeError> {
         if let (Some(n1), Some(n2)) = (self.as_int(), other.as_int()) {
             match (n1, n2) {
@@ -784,6 +791,26 @@ impl AllocIntoValue for usize {
             && let Some(result) = Value::from_small_int(n)
         {
             result
+        } else {
+            Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
+        }
+    }
+}
+
+impl AllocIntoValue for i64 {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        if let Ok(n) = isize::try_from(self) {
+            Value::alloc_from(n, gc)
+        } else {
+            Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
+        }
+    }
+}
+
+impl AllocIntoValue for u64 {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        if let Ok(n) = isize::try_from(self) {
+            Value::alloc_from(n, gc)
         } else {
             Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
         }
