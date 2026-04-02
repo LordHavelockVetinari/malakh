@@ -50,7 +50,7 @@ Learning
 --------
 
 There's an (incomplete) tutorial in [doc.md](doc.md). More documentation will hopefully be added soon.
-For now, you can check out some examples in [./test/success](./test/success).
+For now, you can check out some examples in [./examples](./examples) and [./test/success](./test/success).
 
 Running Malakh Code
 -------------------
