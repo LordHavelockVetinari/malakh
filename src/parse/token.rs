@@ -576,6 +576,28 @@ impl Scanner {
                 let location = self.skip_get(i);
                 Token(StringLiteral(s), location)
             }
+            Some(b'\'') => {
+                let mut s = Vec::new();
+                let mut i = 1;
+                loop {
+                    match self.char_at(i)? {
+                        None => return self.err("unfinished string literal"),
+                        Some(b'\'') => {
+                            i += 1;
+                            break;
+                        }
+                        Some(b'\n') => {
+                            return self.err("a string literal may not contain newlines");
+                        }
+                        Some(c) => {
+                            s.push(c);
+                            i += 1;
+                        }
+                    }
+                }
+                let location = self.skip_get(i);
+                Token(StringLiteral(s), location)
+            }
             // "$scanner_reset_location\n" is a special directive that causes the scanner
             // to reset both the line number and column number to 1.
             // It is used by the "-c" argument.

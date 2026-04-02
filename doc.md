@@ -78,7 +78,6 @@ Hopefully, they will all be added soon:
 - Accessing local variables from nested processes.
 - Assignment to `_`.
 - try-finally.
-- Binary and hexadecimal numbers.
 - `Data::Count`.
 - `MinHeap` and `MaxHeap`.
 - `String::FromCharCodes`, `String::CharCodes`.
