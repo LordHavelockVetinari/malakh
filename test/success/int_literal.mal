@@ -1,0 +1,13 @@
+Main -> {
+    out 100
+    out 0x64
+    out 0b1100100
+    out 0255
+    out 0X0Ff
+    out 0B0011111111
+    out 1_2
+    out 0_1_2
+    out 0x_0_c
+    out 0b_1100
+    out 0B11_00
+}

@@ -1,4 +1,5 @@
 use malachite::Integer;
+use malachite::base::num::conversion::traits::FromStringBase;
 use std::collections::{HashMap, VecDeque};
 use std::io::{self, BufReader, Read};
 use std::str::FromStr;
@@ -315,29 +316,86 @@ impl Scanner {
         Ok(())
     }
 
-    fn read_digits(&mut self) -> Result<(String, Location), ParseError> {
-        let mut s = String::new();
-        for i in 0usize.. {
-            let Some(c) = self.char_at(i)? else {
-                break;
-            };
-            if !c.is_ascii_digit() {
-                break;
+    fn skip_digit_separator<F>(&mut self, is_digit: F) -> Result<(), ParseError>
+    where
+        F: FnOnce(&u8) -> bool,
+    {
+        if self.char_at(0)? == Some(b'_') {
+            self.skip(1);
+            if !self.char_at(0)?.is_some_and(|c| is_digit(&c)) {
+                return self.err("expected digit after digit separator");
             }
+        }
+        Ok(())
+    }
+
+    fn read_digits<F>(&mut self, mut is_digit: F) -> Result<String, ParseError>
+    where
+        F: FnMut(&u8) -> bool,
+    {
+        let mut s = String::new();
+        while let Some(c) = self.char_at(0)?
+            && is_digit(&c)
+        {
             s.push(c as char);
+            self.skip(1);
+            self.skip_digit_separator(|c| is_digit(c))?;
         }
         if s.is_empty() {
             self.err("expected one or more digits")?;
         }
-        let location = self.skip_get(s.len());
-        Ok((s, location))
+        Ok(s)
+    }
+
+    fn expect_valid_after_number(&mut self) -> Result<(), ParseError> {
+        if let Some(c) = self.char_at(0)?
+            && matches!(c, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.')
+        {
+            self.err(format!(
+                "disallowed character ({}) after number literal",
+                Self::char_name(c)
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn is_bit(c: &u8) -> bool {
+        *c == b'0' || *c == b'1'
+    }
+
+    fn read_binary(&mut self, location: Location) -> Result<Token, ParseError> {
+        let s = self.read_digits(Self::is_bit)?;
+        let result = Integer::from_string_base(2, &s)
+            .expect("string should contain only bits");
+        self.expect_valid_after_number()?;
+        Ok(Token(TokenType::Integer(result), location))
+    }
+
+    fn read_hexadecimal(&mut self, location: Location) -> Result<Token, ParseError> {
+        let s = self.read_digits(u8::is_ascii_hexdigit)?;
+        let result = Integer::from_string_base(16, &s)
+            .expect("string should contain only hexadecimal digits");
+        self.expect_valid_after_number()?;
+        Ok(Token(TokenType::Integer(result), location))
     }
 
     fn read_number(&mut self) -> Result<Token, ParseError> {
-        let (first_part, location) = self.read_digits()?;
+        let location = self.location.clone();
+        let first_part = self.read_digits(u8::is_ascii_digit)?;
+        if first_part == "0" && matches!(self.char_at(0)?, Some(b'B' | b'b')) {
+            self.skip(1);
+            self.skip_digit_separator(Self::is_bit)?;
+            return self.read_binary(location);
+        }
+        if first_part == "0" && matches!(self.char_at(0)?, Some(b'X' | b'x')) {
+            self.skip(1);
+            self.skip_digit_separator(u8::is_ascii_hexdigit)?;
+            return self.read_hexadecimal(location);
+        }
         let second_part = if self.char_at(0)? == Some(b'.') {
             self.skip(1);
-            self.read_digits()?.0
+            self.read_digits(u8::is_ascii_digit)?
         } else {
             String::new()
         };
@@ -354,19 +412,12 @@ impl Scanner {
                 }
                 _ => "",
             };
-            let e_part = self.read_digits()?.0;
+            let e_part = self.read_digits(u8::is_ascii_digit)?;
             (sign, e_part)
         } else {
             ("", String::new())
         };
-        if let Some(c) = self.char_at(0)?
-            && matches!(c, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.')
-        {
-            return self.err(format!(
-                "disallowed character ({}) after number literal",
-                Self::char_name(c)
-            ));
-        }
+        self.expect_valid_after_number()?;
         if second_part.is_empty() && e_part.is_empty() {
             let n = Integer::from_str(&first_part).unwrap();
             Ok(Token(TokenType::Integer(n), location))
