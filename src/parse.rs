@@ -701,6 +701,9 @@ impl Parser {
                     "unnecessary comma in `out` statement (outputs are separated with spaces)",
                 );
             }
+            if args.is_empty() {
+                return self.err("expected one or more expressions after `out`", out_token.1);
+            }
             Ok(Rc::new(Stmt(StmtType::Out(args), out_token.1)))
         } else if let Some(raise_token) =
             self.consume_if(|t| matches!(t, KeywordErr | KeywordThrow))?

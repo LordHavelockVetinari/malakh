@@ -366,8 +366,7 @@ impl Scanner {
 
     fn read_binary(&mut self, location: Location) -> Result<Token, ParseError> {
         let s = self.read_digits(Self::is_bit)?;
-        let result = Integer::from_string_base(2, &s)
-            .expect("string should contain only bits");
+        let result = Integer::from_string_base(2, &s).expect("string should contain only bits");
         self.expect_valid_after_number()?;
         Ok(Token(TokenType::Integer(result), location))
     }
