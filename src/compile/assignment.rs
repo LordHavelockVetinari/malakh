@@ -1,5 +1,4 @@
 use std::cell::OnceCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use either::Either::{Left, Right};
@@ -64,22 +63,33 @@ struct AssignmentCompiler<'compiler, 'builder> {
 }
 
 impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
-    pub fn validate_no_duplicate_targets(&self) -> Result<(), CompilationError> {
+    fn validate_no_duplicate_targets(&self) -> Result<(), CompilationError> {
         let targets = &self.assignment.targets;
-        match targets.len() {
-            0 => panic!("zero assignment targets"),
-            1 => return Ok(()),
-            2 if targets[0].name != targets[1].name => return Ok(()),
-            3.. => {
-                let name_set = targets
-                    .iter()
-                    .map(|target| &target.name)
-                    .collect::<HashSet<&String>>();
-                if name_set.len() == targets.len() {
+        match &targets[..] {
+            [] => panic!("zero assignment targets"),
+            [_] => return Ok(()),
+            [target1, target2] => {
+                if target1.typ == AssignmentType::Discard
+                    || target2.typ == AssignmentType::Discard
+                    || target1.name != target2.name
+                {
                     return Ok(());
                 }
             }
-            _ => {}
+            _ => {
+                let mut names = targets
+                    .iter()
+                    .filter(|target| target.typ != AssignmentType::Discard)
+                    .map(|target| &target.name[..])
+                    .collect::<Vec<&str>>();
+                names.sort();
+                if !names
+                    .array_windows::<2>()
+                    .any(|[name1, name2]| name1 == name2)
+                {
+                    return Ok(());
+                }
+            }
         }
         CompilationError::err("duplicate targets in assignment", &self.assignment.location)
     }
@@ -118,7 +128,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         }
     }
 
-    pub fn target_to_register_choice(
+    fn target_to_register_choice(
         &self,
         target: &Rc<AssignmentTarget>,
     ) -> Result<RegisterChoice, CompilationError> {
@@ -133,6 +143,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
             AssignmentType::Assignment => Ok(RegisterChoice::Existing(
                 self.get_assignment_index(&target.name, &target.location)?,
             )),
+            AssignmentType::Discard => Ok(RegisterChoice::Any),
             AssignmentType::AugmentedAssignment(_) => CompilationError::err(
                 "an augmented assignment is not allowed in this context",
                 &target.location,
@@ -288,6 +299,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
             AssignedValueType::In => {
                 let reg =
                     reg_choice.or_alloc(self.builder.register_allocator_mut(), &value.location)?;
+                debug_assert!(reg_choice == RegisterChoice::Any || reg.index != 0);
                 match self.context {
                     AssignmentContext::Normal => {
                         self.builder.add_code(code! {
@@ -471,7 +483,9 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                     );
                     self.compiler.compile_move(new_reg, reg, self.builder);
                 }
-                RegisterChoice::Any => panic!("target_to_register_choice should not return Any"),
+                RegisterChoice::Any => {
+                    debug_assert!(target.typ == AssignmentType::Discard);
+                }
             }
         }
         Ok(())
@@ -482,7 +496,11 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         assert_eq!(targets.len(), values.len());
         for (target, value) in targets.iter().zip(values) {
             let reg_choice = self.target_to_register_choice(target)?;
-            if self.context == AssignmentContext::Normal && !value.is_last {
+            if target.typ == AssignmentType::Discard {
+                assert_eq!(reg_choice, RegisterChoice::Any);
+                let new_reg = self.compile_assigned_value(value, reg_choice)?;
+                new_reg.dealloc(self.builder.register_allocator_mut());
+            } else if self.context == AssignmentContext::Normal && !value.is_last {
                 let new_reg = self.compile_assigned_value(value, RegisterChoice::AllocNew)?;
                 if let RegisterChoice::Existing(reg) = reg_choice {
                     self.copied_registers.insert_new(

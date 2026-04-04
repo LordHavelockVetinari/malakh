@@ -133,6 +133,7 @@ pub enum AssignmentType {
     Assignment,
     AugmentedAssignment(BinaryOperator),
     Constructor,
+    Discard,
 }
 
 #[derive(Debug)]

@@ -72,6 +72,7 @@ pub enum TokenType {
     KeywordTry,
     KeywordWhile,
     KeywordXor,
+    KeywordUnderscore,
     InternalKeywordDebug,
 }
 
@@ -111,6 +112,7 @@ static KEYWORD_MAP: LazyLock<HashMap<String, TokenType>> = LazyLock::new(|| {
         ("switch".to_string(), KeywordSwitch),
         ("while".to_string(), KeywordWhile),
         ("xor".to_string(), KeywordXor),
+        ("_".to_string(), KeywordUnderscore),
         ("__debug".to_string(), InternalKeywordDebug),
     ])
 });

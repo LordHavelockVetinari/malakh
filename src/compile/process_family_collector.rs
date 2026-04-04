@@ -156,6 +156,12 @@ impl DefaultCodeVisitor for ProcessFamilyCollector {
                     &decl.location,
                 );
             }
+            AssignmentType::Discard => {
+                return CompilationError::err(
+                    "cannot assign to `_` in global scope",
+                    &decl.location,
+                );
+            }
             AssignmentType::Declaration => {
                 let family_index = self.new_family(&decl.location)?;
                 self.lazy_initializer_map

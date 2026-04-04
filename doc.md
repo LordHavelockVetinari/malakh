@@ -76,7 +76,6 @@ Hopefully, they will all be added soon:
 - Forking (`fork in`), except in builtin processes (e.g. `List`).
 - Local constructors.
 - Accessing local variables from nested processes.
-- Assignment to `_`.
 - try-finally.
 - `Data::Count`.
 - `MinHeap` and `MaxHeap`.

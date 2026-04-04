@@ -575,6 +575,7 @@ fn run_try_receive(vm: &mut Vm, inst: Instruction) {
     };
     match proc.state() {
         ProcessState::Out => {
+            // Write bool after value in case they are the same.
             *vm.register_mut(dst1) = mem::take(proc.output_slot_mut());
             *vm.register_mut(dst2) = Value::TRUE;
             *proc.state_mut() = ProcessState::Run;
@@ -641,6 +642,7 @@ fn run_send(vm: &mut Vm, inst: Instruction) {
             debug_assert_eq!(opt_in_inst.opcode(), OPT_IN);
             let (value_dst, bool_dst, _) = opt_in_inst.as_three_operand();
             let mem = proc.memory_mut();
+            // Write bool after value in case they are the same.
             mem[value_dst as usize] = src2;
             mem[bool_dst as usize] = Value::TRUE;
             *proc.state_mut() = ProcessState::Run;

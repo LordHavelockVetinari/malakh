@@ -700,7 +700,7 @@ impl From<BuiltinProcessRef> for Value {
     fn from(proc: BuiltinProcessRef) -> Self {
         Self(
             proc.0
-                .map_addr(|addr| (addr | Self::BUILTIN_PROCESS_TAG))
+                .map_addr(|addr| addr | Self::BUILTIN_PROCESS_TAG)
                 .cast::<u8>(),
         )
     }
@@ -710,7 +710,7 @@ impl From<UserProcessRef> for Value {
     fn from(proc: UserProcessRef) -> Self {
         Self(
             proc.0
-                .map_addr(|addr| (addr | Self::USER_PROCESS_TAG))
+                .map_addr(|addr| addr | Self::USER_PROCESS_TAG)
                 .cast::<u8>(),
         )
     }
@@ -727,7 +727,7 @@ impl From<BigIntRef> for Value {
         Self(
             int_ref
                 .0
-                .map_addr(|addr| (addr | Self::BIG_INT_TAG))
+                .map_addr(|addr| addr | Self::BIG_INT_TAG)
                 .cast::<u8>(),
         )
     }
@@ -743,7 +743,7 @@ impl From<&'static Symbol> for Value {
     fn from(sym: &'static Symbol) -> Self {
         Self(
             NonNull::from(sym)
-                .map_addr(|addr| (addr | Self::SYMBOL_TAG))
+                .map_addr(|addr| addr | Self::SYMBOL_TAG)
                 .cast::<u8>(),
         )
     }
@@ -757,7 +757,7 @@ impl From<bool> for Value {
 
 impl From<StringRef> for Value {
     fn from(s: StringRef) -> Self {
-        Self(s.0.map_addr(|addr| (addr | Self::STRING_TAG)).cast::<u8>())
+        Self(s.0.map_addr(|addr| addr | Self::STRING_TAG).cast::<u8>())
     }
 }
 
@@ -766,7 +766,7 @@ impl From<CaptureRef> for Value {
         Self(
             capture
                 .0
-                .map_addr(|addr| (addr | Self::CAPTURE_TAG))
+                .map_addr(|addr| addr | Self::CAPTURE_TAG)
                 .cast::<u8>(),
         )
     }

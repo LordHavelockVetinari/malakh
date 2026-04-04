@@ -1,0 +1,95 @@
+Foo -> {
+    _, x := in
+    out x
+    x, _ = in
+    out x
+    _, _ = in
+}
+
+Bar -> {
+    while _ := in {}
+    out 123
+}
+
+Baz -> {
+    x:
+    while x, _ = in {}
+    out x
+}
+
+Quux -> {
+    if x, _, y := in {
+        out y x
+    }
+    x, _ := in
+    _ = in
+    out x
+    _ := in
+    else {
+        out 100
+    }
+    out 200
+    _ := in
+    else {
+        out 300
+    }
+}
+
+Spam -> {
+    x, _, y := 1, 2, 3
+    _, _, y = y + 1, y + 2, y + 3
+    out x y
+}
+
+Ham -> {
+    if _ := [{out 123}] {
+        out "ham"
+    }
+    if _ := [{}] {
+        out "Error!"
+    }
+    x:
+    if _, (x), y := [Range Infinity] {
+        out x y
+    }
+    if x, _ = [{out 1}] {
+        out "Error!"
+    }
+    _, _ := [{out 1}]
+    else {
+        out "OK"
+    }
+    _ := [{out 1}]
+    else {
+        out "Error!"
+    }
+    while i, _ := [Range 5] {
+        out i
+    }
+    while _, i := [Range 5] {
+        out i
+    }
+}
+
+Main -> {
+    foo := Foo
+    out [foo 3 4]
+    out [foo 5 6]
+    Assert ([Process::State (foo 7 8)] == .Stop)
+
+    out [Bar 7 8 9]
+    
+    out [Baz]
+    out [Baz 1]
+    out [Baz 1 2]
+    out [Baz 1 2 3]
+    out [Baz 1 2 3 4]
+    out [Baz 1 2 3 4 5]
+
+    out [Quux]... [Quux 1 2]...
+    quux := Quux
+    out [quux 1 2 3]... [quux 4 5 6] [quux .Spam] [quux]
+
+    out [Spam]...
+    out [Ham]...
+}

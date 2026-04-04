@@ -28,7 +28,7 @@ impl RegisterAllocator {
         if let Some(Reverse(index)) = self.currently_free.pop() {
             Ok(index)
         } else if self.num_registers == MAX_NUM_REGISTERS {
-            return CompilationError::err("process requires too much memory", location);
+            CompilationError::err("process requires too much memory", location)
         } else {
             self.num_registers += 1;
             Ok((self.num_registers - 1) as u16)
@@ -61,7 +61,7 @@ impl RegisterAllocator {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum RegisterChoice {
     // `Any` means: either choose an existing register with the correct value,
     // or allocate a new temporary register.

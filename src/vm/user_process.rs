@@ -33,7 +33,7 @@ pub struct UserProcessHeader {
     instruction_pointer: *const Instruction,
 }
 
-const _: () = assert!(size_of::<UserProcessHeader>() % size_of::<Value>() == 0);
+const _: () = assert!(size_of::<UserProcessHeader>().is_multiple_of(size_of::<Value>()));
 
 impl TryBody {
     pub fn contains(&self, instruction: *const Instruction) -> bool {

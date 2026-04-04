@@ -406,17 +406,23 @@ impl Parser {
                 name,
                 location,
             })
-        } else if let Some(lparen) = self.consume_if(|typ| matches!(typ, LParen))? {
+        } else if let Some(lparen) = self.consume_if(|t| matches!(t, LParen))? {
             let Some(name) = self.parse_ident()? else {
                 return self.err_here("expected a variable name");
             };
-            if self.consume_if(|typ| matches!(typ, RParen))?.is_none() {
+            if self.consume_if(|t| matches!(t, RParen))?.is_none() {
                 return self.err_here("expected a closing parenthesis");
             };
             Ok(AssignmentTarget {
                 typ: AssignmentType::Assignment,
                 name,
                 location: lparen.1,
+            })
+        } else if let Some(underscore) = self.consume_if(|t| matches!(t, KeywordUnderscore))? {
+            Ok(AssignmentTarget {
+                typ: AssignmentType::Discard,
+                name: String::new(),
+                location: underscore.1,
             })
         } else {
             self.err_here("expected a variable name")
@@ -497,6 +503,9 @@ impl Parser {
                             target.location.clone(),
                         );
                     }
+                    AssignmentType::Discard => {
+                        return self.err("cannot declare `_` as variable", target.location.clone());
+                    }
                     AssignmentType::Constructor | AssignmentType::AugmentedAssignment(_) => {
                         unreachable!()
                     }
@@ -534,12 +543,30 @@ impl Parser {
         }
         if matches!(
             assignment_type,
+            AssignmentType::Constructor | AssignmentType::AugmentedAssignment(_)
+        ) && let Some(bad_target) = targets
+            .iter()
+            .find(|target| target.typ == AssignmentType::Discard)
+        {
+            let message = match assignment_type {
+                AssignmentType::Constructor => "constructor name cannot be `_`",
+                AssignmentType::AugmentedAssignment(_) => {
+                    "cannot apply augmented assignment operator to `_`"
+                }
+                _ => unreachable!(),
+            };
+            return self.err(message, bad_target.location.clone());
+        }
+        if matches!(
+            assignment_type,
             AssignmentType::Assignment
                 | AssignmentType::AugmentedAssignment(_)
                 | AssignmentType::Constructor
         ) {
             for target in &mut targets {
-                target.typ = assignment_type;
+                if target.typ == AssignmentType::Declaration {
+                    target.typ = assignment_type;
+                }
             }
         }
         let values = self.parse_comma_separated_exprs(value_restrictions)?;
@@ -555,10 +582,10 @@ impl Parser {
     }
 
     fn is_before_assignment_or_declaration(&mut self) -> Result<bool, ParseError> {
-        let index = if matches!(self.token_at(0)?.0, Identifier(_)) {
+        let index = if matches!(self.token_at(0)?.0, Identifier(_) | KeywordUnderscore) {
             1
         } else if matches!(self.token_at(0)?.0, LParen)
-            && matches!(self.token_at(1)?.0, Identifier(_))
+            && matches!(self.token_at(1)?.0, Identifier(_) | KeywordUnderscore)
             && matches!(self.token_at(2)?.0, RParen)
         {
             3
@@ -599,7 +626,9 @@ impl Parser {
         let location = assignment.location.clone();
         for target in &assignment.targets {
             match target.typ {
-                AssignmentType::Assignment | AssignmentType::Declaration => {}
+                AssignmentType::Assignment
+                | AssignmentType::Declaration
+                | AssignmentType::Discard => {}
                 AssignmentType::AugmentedAssignment(_) => {
                     return self.err(
                         "augmented assignment is not allowed in a condition",
@@ -942,6 +971,13 @@ impl Parser {
             ) {
                 return self.err(
                     "assignment statements are only allowed within a process",
+                    target.location.clone(),
+                );
+            }
+
+            if matches!(target.typ, AssignmentType::Discard) {
+                return self.err(
+                    "cannot assign to `_` in global scope",
                     target.location.clone(),
                 );
             }
