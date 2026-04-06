@@ -509,7 +509,6 @@ impl Compiler {
         let mut fallthrough_jumps = Vec::new();
         let mut end_jumps: Vec<usize> = Vec::new();
         for (case_no, case) in cases.iter().enumerate() {
-            let is_last_case = case_no == cases.len() - 1;
             if let Some(values) = &case.values {
                 assert_ne!(values.len(), 0);
                 for (i, value) in values.iter().enumerate() {
@@ -534,11 +533,16 @@ impl Compiler {
             for jump in success_jumps.drain(..) {
                 builder.link_jump_here(jump, &case.location)?;
             }
-            if is_last_case {
+            let need_to_free_reg = match &cases[case_no + 1..] {
+                [] => case.values.is_some() || cases.len() == 1,
+                [last_case] => last_case.values.is_none(),
+                _ => false,
+            };
+            if need_to_free_reg {
                 reg.dealloc(builder.register_allocator_mut());
             }
             self.compile_block(&case.body, builder)?;
-            if !is_last_case || case.values.is_some() {
+            if case.values.is_some() {
                 end_jumps.push(builder.add_jump(instruction! {
                     JUMP 0, 0;
                 }));
@@ -548,7 +552,6 @@ impl Compiler {
             }
         }
         if cases.last().unwrap().values.is_some() {
-            reg.dealloc(builder.register_allocator_mut());
             builder.add_code(code! {
                 ERROR_NO_CASE 0, 0, 0;
             });
