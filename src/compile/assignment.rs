@@ -9,7 +9,7 @@ use crate::compile::error::CompilationError;
 use crate::compile::process_family_builder::ProcessFamilyBuilder;
 use crate::compile::register_allocator::{ChosenRegister, RegisterChoice};
 use crate::parse::location::Location;
-use crate::parse::tree::{Assignment, AssignmentTarget, AssignmentType, Expr, ExprType};
+use crate::parse::tree::{Assignment, AssignmentTarget, AssignmentType, Expr, ExprType, InputType};
 use crate::util::ptr_map::PtrMap;
 use crate::vm::macros::{code, instruction};
 
@@ -63,6 +63,13 @@ struct AssignmentCompiler<'compiler, 'builder> {
 }
 
 impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
+    fn is_captured(&self, target: &Rc<AssignmentTarget>) -> bool {
+        self.compiler
+            .captures
+            .capture_assignment_targets
+            .contains(Rc::clone(target))
+    }
+
     fn validate_no_duplicate_targets(&self) -> Result<(), CompilationError> {
         let targets = &self.assignment.targets;
         match &targets[..] {
@@ -94,11 +101,8 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         CompilationError::err("duplicate targets in assignment", &self.assignment.location)
     }
 
-    fn get_assignment_index(
-        &self,
-        name: &str,
-        location: &Location,
-    ) -> Result<u16, CompilationError> {
+    fn get_assignment_index(&self, target: &Rc<AssignmentTarget>) -> Result<u16, CompilationError> {
+        let AssignmentTarget { name, location, .. } = &**target;
         match self.builder.environment().get_definition(name) {
             None => CompilationError::err(
                 format!(
@@ -125,6 +129,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                 location,
             ),
             Some(Right(&LocalDefinition::Variable { index })) => Ok(index),
+            Some(Right(&LocalDefinition::CapturedVariable { index })) => Ok(index),
         }
     }
 
@@ -140,9 +145,9 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         }
         match target.typ {
             AssignmentType::Declaration => Ok(RegisterChoice::AllocNew),
-            AssignmentType::Assignment => Ok(RegisterChoice::Existing(
-                self.get_assignment_index(&target.name, &target.location)?,
-            )),
+            AssignmentType::Assignment => {
+                Ok(RegisterChoice::Existing(self.get_assignment_index(target)?))
+            }
             AssignmentType::Discard => Ok(RegisterChoice::Any),
             AssignmentType::AugmentedAssignment(_) => CompilationError::err(
                 "an augmented assignment is not allowed in this context",
@@ -199,13 +204,30 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         let AssignmentType::AugmentedAssignment(op) = target.typ else {
             panic!("expected an augmented assignment");
         };
-        let var_reg = self.get_assignment_index(&target.name, &target.location)?;
+        let var_reg = self.get_assignment_index(target)?;
         let rhs_reg = self
             .compiler
             .compile_expr(value, RegisterChoice::Any, self.builder)?;
-        rhs_reg.dealloc(self.builder.register_allocator_mut());
-        self.compiler
-            .compile_binary_op(op, var_reg, rhs_reg.index, var_reg, self.builder);
+        if self.is_captured(target) {
+            let tmp_reg = self
+                .builder
+                .register_allocator_mut()
+                .alloc_temporary(&target.location)?;
+            rhs_reg.dealloc(self.builder.register_allocator_mut());
+            self.builder.register_allocator_mut().dealloc(tmp_reg);
+            self.builder.add_code(code! {
+                LOAD_CAPTURE tmp_reg, var_reg, 0;
+            });
+            self.compiler
+                .compile_binary_op(op, tmp_reg, rhs_reg.index, tmp_reg, self.builder);
+            self.builder.add_code(code! {
+                STORE_CAPTURE var_reg, tmp_reg, 0;
+            });
+        } else {
+            rhs_reg.dealloc(self.builder.register_allocator_mut());
+            self.compiler
+                .compile_binary_op(op, var_reg, rhs_reg.index, var_reg, self.builder);
+        }
         Ok(())
     }
 
@@ -365,7 +387,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
     fn expr_to_assigned_value(expr: &Rc<Expr>) -> AssignedValue {
         AssignedValue {
             typ: match &expr.0 {
-                ExprType::In => AssignedValueType::In,
+                ExprType::In(InputType::Normal) => AssignedValueType::In,
                 ExprType::Receive(process) => AssignedValueType::Receive {
                     expr: Rc::clone(process),
                     source_reg: Rc::new(OnceCell::new()),
@@ -465,7 +487,6 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                         CONST reg, self.compiler.const_undefined_index;
                     });
                 }
-                RegisterChoice::AllocNew => {}
                 RegisterChoice::Existing(reg) => {
                     if i == self.assignment.targets.len() - 1 {
                         continue;
@@ -481,11 +502,21 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                             copy: new_reg,
                         },
                     );
-                    self.compiler.compile_move(new_reg, reg, self.builder);
+                    if self.is_captured(target) {
+                        self.builder.add_code(code! {
+                            LOAD_CAPTURE new_reg, reg, 0;
+                        });
+                    } else {
+                        self.compiler.compile_move(new_reg, reg, self.builder);
+                    }
                 }
-                RegisterChoice::Any => {
-                    debug_assert!(target.typ == AssignmentType::Discard);
+                RegisterChoice::Any if target.typ != AssignmentType::Discard => {
+                    debug_assert!(self.is_captured(target));
+                    if self.context == AssignmentContext::AssignElse {
+                        debug_assert!(target.typ != AssignmentType::Declaration);
+                    }
                 }
+                RegisterChoice::AllocNew | RegisterChoice::Any => {}
             }
         }
         Ok(())
@@ -502,14 +533,45 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                 new_reg.dealloc(self.builder.register_allocator_mut());
             } else if self.context == AssignmentContext::Normal && !value.is_last {
                 let new_reg = self.compile_assigned_value(value, RegisterChoice::AllocNew)?;
-                if let RegisterChoice::Existing(reg) = reg_choice {
-                    self.copied_registers.insert_new(
-                        Rc::clone(target),
-                        CopiedRegister {
-                            original: reg,
-                            copy: new_reg.index,
-                        },
-                    );
+                match reg_choice {
+                    RegisterChoice::Existing(reg) => {
+                        self.copied_registers.insert_new(
+                            Rc::clone(target),
+                            CopiedRegister {
+                                original: reg,
+                                copy: new_reg.index,
+                            },
+                        );
+                    }
+                    RegisterChoice::AllocNew => {
+                        self.selected_registers
+                            .insert_new(Rc::clone(target), new_reg.index);
+                    }
+                    RegisterChoice::Any => unreachable!(),
+                }
+            } else if self.is_captured(target)
+                && self.copied_registers.get(Rc::clone(target)).is_none()
+                && self.selected_registers.get(Rc::clone(target)).is_none()
+            {
+                // TODO: consider changing this to RegisterChoice::Any when possible.
+                let new_reg = self.compile_assigned_value(value, RegisterChoice::AllocNew)?;
+                if let RegisterChoice::Existing(capture_reg) = reg_choice {
+                    if value.is_last {
+                        match self.context {
+                            AssignmentContext::Normal => {}
+                            AssignmentContext::If
+                            | AssignmentContext::While
+                            | AssignmentContext::AssignElse => {
+                                self.builder.add_code(code! {
+                                    JUMP_UNLESS 0, 1;
+                                });
+                            }
+                        }
+                    }
+                    self.builder.add_code(code! {
+                        STORE_CAPTURE capture_reg, new_reg.index, 0;
+                    });
+                    new_reg.dealloc(self.builder.register_allocator_mut());
                 } else {
                     self.selected_registers
                         .insert_new(Rc::clone(target), new_reg.index);
@@ -526,24 +588,47 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
     }
 
     fn post_assignment(&mut self) -> Result<(), CompilationError> {
-        for target in &self.assignment.targets {
-            let Some(&reg) = self.selected_registers.get(Rc::clone(target)) else {
-                continue;
-            };
-            self.builder.environment_mut().add_local(
-                target.name.clone(),
-                LocalDefinition::Variable { index: reg },
-                &target.location,
-            )?;
-        }
         for jump in self.fail_jumps.drain(..) {
             self.builder
                 .link_jump_here(jump, &self.assignment.location)?;
         }
         for target in &self.assignment.targets {
+            let Some(&reg) = self.selected_registers.get(Rc::clone(target)) else {
+                continue;
+            };
+            if self.is_captured(target) {
+                match target.typ {
+                    AssignmentType::Assignment => {}
+                    AssignmentType::Declaration => {
+                        self.builder.add_code(code! {
+                            CAPTURE reg, reg, 0;
+                        });
+                        self.builder.environment_mut().add_local(
+                            target.name.clone(),
+                            LocalDefinition::CapturedVariable { index: reg },
+                            &target.location,
+                        )?;
+                    }
+                    _ => panic!("unexpected target type"),
+                }
+            } else {
+                self.builder.environment_mut().add_local(
+                    target.name.clone(),
+                    LocalDefinition::Variable { index: reg },
+                    &target.location,
+                )?;
+            }
+        }
+        for target in &self.assignment.targets {
             if let Some(copy) = self.copied_registers.get(Rc::clone(target)) {
-                self.compiler
-                    .compile_move(copy.original, copy.copy, self.builder);
+                if self.is_captured(target) {
+                    self.builder.add_code(code! {
+                        STORE_CAPTURE copy.original, copy.copy, 0;
+                    });
+                } else {
+                    self.compiler
+                        .compile_move(copy.original, copy.copy, self.builder);
+                }
                 self.builder.register_allocator_mut().dealloc(copy.copy);
             }
         }

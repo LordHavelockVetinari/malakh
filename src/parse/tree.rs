@@ -53,12 +53,18 @@ pub struct Argument {
 }
 
 #[derive(Debug)]
+pub enum InputType {
+    Normal,
+    Fork,
+}
+
+#[derive(Debug)]
 pub enum ExprType {
     ConstantLiteral(ConstantLiteral),
     ProcessLiteral(Vec<Rc<Stmt>>),
     Identifier(String),
     Path(Vec<String>),
-    In,
+    In(InputType),
     Parenthesized(Rc<Expr>),
     Unary(UnaryOperator, Rc<Expr>),
     Binary(BinaryOperator, Rc<Expr>, Rc<Expr>),
@@ -104,7 +110,7 @@ pub struct TryBlock {
 #[derive(Debug)]
 pub enum StmtType {
     Expr(Rc<Expr>),
-    Declaration(Vec<(String, Location)>),
+    Declaration(Vec<Rc<AssignmentTarget>>),
     Assignment(Rc<Assignment>),
     AssignmentElse(Rc<Assignment>, Vec<Rc<Stmt>>),
     Debug(Rc<Expr>),
@@ -181,6 +187,7 @@ pub trait CodeVisitor {
     fn visit_binary(&mut self, expr: &Rc<Expr>) -> Self::Output;
     fn visit_send(&mut self, expr: &Rc<Expr>) -> Self::Output;
     fn visit_receive(&mut self, expr: &Rc<Expr>) -> Self::Output;
+    fn visit_assignment_target(&mut self, target: &Rc<AssignmentTarget>) -> Self::Output;
     fn visit_expr_stmt(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_declaration(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
     fn visit_assignment_stmt(&mut self, stmt: &Rc<Stmt>) -> Self::Output;
@@ -198,7 +205,7 @@ pub trait CodeVisitor {
     fn visit_import_declaration(&mut self, decl: &Rc<ImportDeclaration>) -> Self::Output;
     fn visit_code_file(&mut self, file: &Rc<CodeFile>) -> Self::Output;
 
-    fn visit<C: VisitableCode>(&mut self, code: C) -> Self::Output
+    fn visit<C: VisitableCode>(&mut self, code: &C) -> Self::Output
     where
         Self: Sized,
     {
@@ -206,18 +213,33 @@ pub trait CodeVisitor {
     }
 }
 
-pub trait VisitableCode {
-    fn accept_visitor<V: CodeVisitor>(self, visitor: &mut V) -> V::Output;
+pub trait ResultCodeVisitor<E>
+where
+    Self: Sized + CodeVisitor<Output = Result<(), E>>,
+{
+    #[must_use]
+    fn visit_many<C: VisitableCode>(&mut self, codes: &[C]) -> Self::Output {
+        for code in codes {
+            self.visit(code)?;
+        }
+        Ok(())
+    }
 }
 
-impl VisitableCode for &Rc<Expr> {
-    fn accept_visitor<V: CodeVisitor>(self, visitor: &mut V) -> V::Output {
+impl<T, E> ResultCodeVisitor<E> for T where T: CodeVisitor<Output = Result<(), E>> {}
+
+pub trait VisitableCode {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output;
+}
+
+impl VisitableCode for Rc<Expr> {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
         match &self.0 {
             ExprType::ConstantLiteral(..) => visitor.visit_constant_literal(self),
             ExprType::ProcessLiteral(..) => visitor.visit_process_literal(self),
             ExprType::Identifier(..) => visitor.visit_identifier(self),
             ExprType::Path(..) => visitor.visit_path(self),
-            ExprType::In => visitor.visit_in(self),
+            ExprType::In(..) => visitor.visit_in(self),
             ExprType::Parenthesized(..) => visitor.visit_parenthesized(self),
             ExprType::Unary(..) => visitor.visit_unary(self),
             ExprType::Binary(..) => visitor.visit_binary(self),
@@ -227,8 +249,14 @@ impl VisitableCode for &Rc<Expr> {
     }
 }
 
-impl VisitableCode for &Condition {
-    fn accept_visitor<V: CodeVisitor>(self, visitor: &mut V) -> V::Output {
+impl VisitableCode for Rc<AssignmentTarget> {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_assignment_target(self)
+    }
+}
+
+impl VisitableCode for Condition {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
         match self {
             Condition::Boolean(expr) => visitor.visit(expr),
             Condition::Assignment(stmt) => visitor.visit(stmt),
@@ -236,8 +264,8 @@ impl VisitableCode for &Condition {
     }
 }
 
-impl VisitableCode for &Rc<Stmt> {
-    fn accept_visitor<V: CodeVisitor>(self, visitor: &mut V) -> V::Output {
+impl VisitableCode for Rc<Stmt> {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
         match &self.0 {
             StmtType::Expr(..) => visitor.visit_expr_stmt(self),
             StmtType::Declaration(..) => visitor.visit_declaration(self),
@@ -256,14 +284,20 @@ impl VisitableCode for &Rc<Stmt> {
     }
 }
 
-impl VisitableCode for &Rc<CodeFile> {
-    fn accept_visitor<V: CodeVisitor>(self, visitor: &mut V) -> V::Output {
+impl VisitableCode for Argument {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit(&self.expr)
+    }
+}
+
+impl VisitableCode for Rc<CodeFile> {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_code_file(self)
     }
 }
 
-impl VisitableCode for &GlobalDeclaration {
-    fn accept_visitor<V: CodeVisitor>(self, visitor: &mut V) -> V::Output {
+impl VisitableCode for GlobalDeclaration {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
         match self {
             GlobalDeclaration::Assignment(decl) => visitor.visit_global_assignment(decl),
             GlobalDeclaration::Import(decl) => visitor.visit_import_declaration(decl),
@@ -271,11 +305,11 @@ impl VisitableCode for &GlobalDeclaration {
     }
 }
 
-#[allow(unused)]
 pub trait DefaultCodeVisitor: Sized {
     type Error;
 
     fn visit_constant_literal(&mut self, expr: &Rc<Expr>) -> Result<(), Self::Error> {
+        let _ = expr;
         Ok(())
     }
 
@@ -283,21 +317,21 @@ pub trait DefaultCodeVisitor: Sized {
         let Expr(ExprType::ProcessLiteral(stmts), _) = &**expr else {
             panic!("visitor method got wrong variant")
         };
-        for stmt in stmts {
-            self.visit(stmt)?;
-        }
-        Ok(())
+        self.visit_many(stmts)
     }
 
     fn visit_identifier(&mut self, expr: &Rc<Expr>) -> Result<(), Self::Error> {
+        let _ = expr;
         Ok(())
     }
 
     fn visit_path(&mut self, expr: &Rc<Expr>) -> Result<(), Self::Error> {
+        let _ = expr;
         Ok(())
     }
 
     fn visit_in(&mut self, expr: &Rc<Expr>) -> Result<(), Self::Error> {
+        let _ = expr;
         Ok(())
     }
 
@@ -338,6 +372,14 @@ pub trait DefaultCodeVisitor: Sized {
         self.visit(inner)
     }
 
+    fn visit_assignment_target(
+        &mut self,
+        target: &Rc<AssignmentTarget>,
+    ) -> Result<(), Self::Error> {
+        let _ = target;
+        Ok(())
+    }
+
     fn visit_expr_stmt(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         let Stmt(StmtType::Expr(expr), _) = &**stmt else {
             panic!("visitor method got wrong variant");
@@ -346,56 +388,45 @@ pub trait DefaultCodeVisitor: Sized {
     }
 
     fn visit_declaration(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
-        let Stmt(StmtType::Declaration(_), _) = &**stmt else {
+        let Stmt(StmtType::Declaration(targets), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        Ok(())
+        self.visit_many(targets)
     }
 
     fn visit_assignment_stmt(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         let Stmt(StmtType::Assignment(assignment), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for value in &assignment.values {
-            self.visit(value)?;
-        }
-        Ok(())
+        self.visit_many(&assignment.targets)?;
+        self.visit_many(&assignment.values)
     }
 
     fn visit_assignment_else(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         let Stmt(StmtType::AssignmentElse(assignment, else_), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for value in &assignment.values {
-            self.visit(value)?;
-        }
-        for stmt in else_ {
-            self.visit(stmt)?;
-        }
-        Ok(())
+        self.visit_many(&assignment.targets)?;
+        self.visit_many(&assignment.values)?;
+        self.visit_many(else_)
     }
 
     fn visit_out(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         let Stmt(StmtType::Out(args), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for arg in args {
-            self.visit(&arg.expr)?;
-        }
-        Ok(())
+        self.visit_many(args)
     }
 
     fn visit_raise(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         let Stmt(StmtType::Raise(_, args), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for arg in args {
-            self.visit(&arg.expr)?;
-        }
-        Ok(())
+        self.visit_many(args)
     }
 
     fn visit_jump(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        let _ = stmt;
         Ok(())
     }
 
@@ -411,13 +442,8 @@ pub trait DefaultCodeVisitor: Sized {
             panic!("visitor method got wrong variant");
         };
         self.visit(cond)?;
-        for stmt in then {
-            self.visit(stmt)?;
-        }
-        for stmt in else_ {
-            self.visit(stmt)?;
-        }
-        Ok(())
+        self.visit_many(then)?;
+        self.visit_many(else_)
     }
 
     fn visit_switch(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
@@ -427,13 +453,9 @@ pub trait DefaultCodeVisitor: Sized {
         self.visit(expr)?;
         for case in cases {
             if let Some(values) = &case.values {
-                for value in values {
-                    self.visit(value)?;
-                }
+                self.visit_many(values)?;
             }
-            for stmt in &case.body {
-                self.visit(stmt)?;
-            }
+            self.visit_many(&case.body)?;
         }
         Ok(())
     }
@@ -445,26 +467,19 @@ pub trait DefaultCodeVisitor: Sized {
         if let Some(cond) = cond {
             self.visit(cond)?;
         }
-        for stmt in stmts {
-            self.visit(stmt)?;
-        }
-        Ok(())
+        self.visit_many(stmts)
     }
 
     fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
         let Stmt(StmtType::Try(TryBlock { body, cases }), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for stmt in body {
-            self.visit(stmt)?;
-        }
+        self.visit_many(body)?;
         for case in cases {
-            for val in case.values.iter().flatten() {
-                self.visit(val);
+            if let Some(values) = &case.values {
+                self.visit_many(values)?;
             }
-            for stmt in &case.body {
-                self.visit(stmt);
-            }
+            self.visit_many(&case.body)?;
         }
         Ok(())
     }
@@ -473,23 +488,18 @@ pub trait DefaultCodeVisitor: Sized {
         let Stmt(StmtType::BareBlock(stmts), _) = &**stmt else {
             panic!("visitor method got wrong variant");
         };
-        for stmt in stmts {
-            self.visit(stmt)?;
-        }
-        Ok(())
+        self.visit_many(stmts)
     }
 
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Result<(), Self::Error> {
-        for value in &decl.values {
-            self.visit(value)?;
-        }
-        Ok(())
+        self.visit_many(&decl.values)
     }
 
     fn visit_import_declaration(
         &mut self,
         import: &Rc<ImportDeclaration>,
     ) -> Result<(), Self::Error> {
+        let _ = import;
         Ok(())
     }
 
@@ -547,6 +557,10 @@ impl<U: DefaultCodeVisitor> CodeVisitor for U {
 
     fn visit_receive(&mut self, expr: &Rc<Expr>) -> Self::Output {
         DefaultCodeVisitor::visit_receive(self, expr)
+    }
+
+    fn visit_assignment_target(&mut self, target: &Rc<AssignmentTarget>) -> Self::Output {
+        DefaultCodeVisitor::visit_assignment_target(self, target)
     }
 
     fn visit_expr_stmt(&mut self, stmt: &Rc<Stmt>) -> Self::Output {

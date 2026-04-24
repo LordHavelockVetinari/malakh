@@ -111,13 +111,17 @@ impl UserProcessRef {
         mem::replace(&mut self.header_mut().can_resume, false)
     }
 
-    pub fn new(family: &'static UserProcessFamily, gc: &mut GarbageCollector) -> Self {
+    pub unsafe fn new_uninit(family: &'static UserProcessFamily) -> Self {
         let layout = family.layout();
-        let mut this = Self(
+        Self(
             NonNull::new(unsafe { alloc::alloc(layout) })
                 .unwrap()
                 .cast::<UserProcessHeader>(),
-        );
+        )
+    }
+
+    pub fn new(family: &'static UserProcessFamily, gc: &mut GarbageCollector) -> Self {
+        let mut this = unsafe { Self::new_uninit(family) };
         unsafe {
             this.0.write(UserProcessHeader {
                 gc_info: GcInfo::default(),
@@ -131,8 +135,27 @@ impl UserProcessRef {
                 .unwrap()
                 .fill(MaybeUninit::new(Value::ZERO));
         }
-        gc.start_tracking(Value::from(this), layout.size());
+        gc.start_tracking(Value::from(this), family.layout().size());
         this
+    }
+
+    pub fn fork(&mut self, gc: &mut GarbageCollector) -> UserProcessRef {
+        let family = self.family();
+        let mut child = unsafe { Self::new_uninit(family) };
+        unsafe {
+            child.0.write(UserProcessHeader {
+                gc_info: GcInfo::default(),
+                family,
+                instruction_pointer: self.instruction_pointer(),
+                state: ProcessState::Run,
+                can_resume: false,
+            });
+        }
+        let self_mem = unsafe { self.memory_uninit().as_mut().unwrap() };
+        let child_mem = unsafe { child.memory_uninit().as_mut().unwrap() };
+        child_mem.copy_from_slice(self_mem);
+        gc.start_tracking(Value::from(child), family.layout().size());
+        child
     }
 
     pub fn gc_mark(&self, gc: &mut GarbageCollector) {

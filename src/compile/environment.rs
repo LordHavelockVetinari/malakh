@@ -34,6 +34,9 @@ pub enum LocalDefinition {
     Variable {
         index: u16,
     },
+    CapturedVariable {
+        index: u16,
+    },
     #[allow(unused)]
     Constructor {
         process_family: u32,
@@ -109,7 +112,8 @@ impl ProcessEnvironment {
                 .expect("name should be in definition map");
             match def {
                 LocalDefinition::Constructor { .. } => {}
-                LocalDefinition::Variable { index } => {
+                LocalDefinition::Variable { index }
+                | LocalDefinition::CapturedVariable { index } => {
                     alloc.dealloc(index);
                 }
             }

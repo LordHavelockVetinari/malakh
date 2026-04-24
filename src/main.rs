@@ -77,7 +77,7 @@ fn main() -> ExitCode {
     };
     vm.options_mut().raw_errors = args.raw_errors;
     if args.print_vm {
-        dbg!(&vm);
+        println!("{:#?}", &vm);
     }
     if !args.check {
         vm.run();

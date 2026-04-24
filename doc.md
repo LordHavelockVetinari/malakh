@@ -73,7 +73,6 @@ Hopefully, they will all be added soon:
 
 - The `this` keyword.
 - The `inout` keyword.
-- Forking (`fork in`), except in builtin processes (e.g. `List`).
 - Local constructors.
 - Accessing local variables from nested processes.
 - try-finally.

@@ -1,4 +1,5 @@
 mod assignment;
+mod capture_analyzer;
 mod environment;
 mod error;
 mod module;
@@ -13,6 +14,7 @@ use either::Either::{Left, Right};
 
 use crate::builtin;
 use crate::compile::assignment::{AssignmentCompilationResult, AssignmentContext};
+use crate::compile::capture_analyzer::CaptureAnalyzer;
 use crate::compile::environment::{GlobalDefinition, LocalDefinition};
 use crate::compile::error::CompilationError;
 use crate::compile::module::Module;
@@ -22,8 +24,8 @@ use crate::compile::register_allocator::{ChosenRegister, RegisterChoice};
 use crate::parse::location::Location;
 use crate::parse::tree::{
     Argument, ArgumentType, Assignment, AssignmentType, BinaryOperator, CodeFile, CodeVisitor,
-    Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, JumpType, RaiseType, Stmt,
-    StmtType, TryBlock, UnaryOperator,
+    Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, InputType, JumpType, RaiseType,
+    Stmt, StmtType, TryBlock, UnaryOperator,
 };
 use crate::vm::builder::VmBuilder;
 use crate::vm::macros::{code, instruction};
@@ -32,6 +34,7 @@ use crate::vm::{Value, Vm};
 pub struct Compiler {
     code: Rc<CodeFile>,
     processes: ProcessFamilyCollector,
+    captures: CaptureAnalyzer,
     // The root module contains all the modules in the program.
     root_module: Module,
     const_undefined_index: u32,
@@ -43,6 +46,7 @@ impl Compiler {
         let mut this = Self {
             code: Rc::clone(&code),
             processes: ProcessFamilyCollector::new(),
+            captures: CaptureAnalyzer::new(),
             root_module: Module::new(),
             const_undefined_index: 0,
             output: VmBuilder::new(),
@@ -57,6 +61,7 @@ impl Compiler {
             .constant(Value::UNDEFINED)
             .expect("failed to create constant Undefined");
         this.processes.visit(&code)?;
+        this.captures.visit(&code)?;
         Ok(this)
     }
 
@@ -313,6 +318,14 @@ impl Compiler {
                     self.compile_move(output_reg.index, index, builder);
                     Ok(output_reg)
                 }
+                Some(Right(&LocalDefinition::CapturedVariable { index })) => {
+                    let output_reg =
+                        register_choice.or_alloc(builder.register_allocator_mut(), &expr.1)?;
+                    builder.add_code(code! {
+                        LOAD_CAPTURE output_reg.index, index, 0;
+                    });
+                    Ok(output_reg)
+                }
                 Some(Right(LocalDefinition::Constructor { .. })) => todo!(),
             },
             ExprType::Path(parts) => {
@@ -328,11 +341,19 @@ impl Compiler {
                     builder,
                 )
             }
-            ExprType::In => {
+            ExprType::In(InputType::Normal) => {
                 let output_reg =
                     register_choice.or_alloc(builder.register_allocator_mut(), &expr.1)?;
                 builder.add_code(code! {
                     IN output_reg.index, 0, 0;
+                });
+                Ok(output_reg)
+            }
+            ExprType::In(InputType::Fork) => {
+                let output_reg =
+                    register_choice.or_alloc(builder.register_allocator_mut(), &expr.1)?;
+                builder.add_code(code! {
+                    FORK_IN output_reg.index, 0, 0;
                 });
                 Ok(output_reg)
             }
@@ -766,17 +787,31 @@ impl Compiler {
                 });
                 Ok(())
             }
-            StmtType::Declaration(vars) => {
-                for (name, location) in vars {
-                    let index = builder.register_allocator_mut().alloc(location)?;
+            StmtType::Declaration(targets) => {
+                for target in targets {
+                    let index = builder.register_allocator_mut().alloc(&target.location)?;
+                    let is_captured = self
+                        .captures
+                        .capture_assignment_targets
+                        .contains(Rc::clone(target));
+                    let definition = if is_captured {
+                        LocalDefinition::CapturedVariable { index }
+                    } else {
+                        LocalDefinition::Variable { index }
+                    };
                     builder.environment_mut().add_local(
-                        name.clone(),
-                        LocalDefinition::Variable { index },
-                        location,
+                        target.name.clone(),
+                        definition,
+                        &target.location,
                     )?;
                     builder.add_code(code! {
                         CONST index, self.const_undefined_index;
                     });
+                    if is_captured {
+                        builder.add_code(code! {
+                            CAPTURE index, index, 0;
+                        });
+                    }
                 }
                 Ok(())
             }

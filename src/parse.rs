@@ -10,7 +10,7 @@ use crate::parse::token::{Token, TokenType};
 use crate::parse::tree::{
     Argument, ArgumentType, Assignment, AssignmentTarget, AssignmentType, BinaryOperator, Block,
     CodeFile, Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, ImportDeclaration,
-    JumpType, RaiseType, Stmt, StmtType, SwitchCase, TryBlock, UnaryOperator,
+    InputType, JumpType, RaiseType, Stmt, StmtType, SwitchCase, TryBlock, UnaryOperator,
 };
 
 mod error;
@@ -149,7 +149,12 @@ impl Parser {
             self.parse_path_extension(&mut parts)?;
             Ok(Rc::new(Expr(ExprType::Path(parts), location)))
         } else if let Some(in_token) = self.consume_if(|typ| matches!(typ, KeywordIn))? {
-            Ok(Rc::new(Expr(ExprType::In, in_token.1)))
+            Ok(Rc::new(Expr(ExprType::In(InputType::Normal), in_token.1)))
+        } else if let Some(fork_token) = self.consume_if(|t| matches!(t, KeywordFork))? {
+            if self.consume_if(|t| matches!(t, KeywordIn))?.is_none() {
+                return self.err_here("expected keyword `in` after `fork`");
+            }
+            Ok(Rc::new(Expr(ExprType::In(InputType::Fork), fork_token.1)))
         } else if let Some(lparen) = self.consume_if(|typ| matches!(typ, LParen))? {
             let inner = self.parse_expr()?;
             if self.consume_if(|typ| matches!(typ, RParen))?.is_none() {
@@ -326,7 +331,7 @@ impl Parser {
         let expr = self.parse_simple_expr()?;
         if let Some(ellipsis_token) = self.consume_if(|t| matches!(t, Ellipsis))? {
             match &expr.0 {
-                ExprType::In => Ok(Argument {
+                ExprType::In(InputType::Normal) => Ok(Argument {
                     typ: ArgumentType::InLoop,
                     expr: Rc::clone(&expr),
                     location: expr.1.clone(),
@@ -493,8 +498,7 @@ impl Parser {
         }
         let location = self.token_at(0)?.1.clone();
         if self.consume_if(|t| matches!(t, Colon))?.is_some() {
-            let mut vars = Vec::new();
-            for target in targets {
+            for target in &targets {
                 match target.typ {
                     AssignmentType::Declaration => {}
                     AssignmentType::Assignment => {
@@ -510,9 +514,9 @@ impl Parser {
                         unreachable!()
                     }
                 }
-                vars.push((target.name, target.location));
             }
-            return Ok(Rc::new(Stmt(StmtType::Declaration(vars), location)));
+            let targets = targets.into_iter().map(Rc::new).collect::<Vec<_>>();
+            return Ok(Rc::new(Stmt(StmtType::Declaration(targets), location)));
         }
         let assignment_type = self.parse_assignment_operator()?;
         if matches!(
@@ -641,7 +645,10 @@ impl Parser {
             }
         }
         for value in &assignment.values {
-            if !matches!(value.0, ExprType::In | ExprType::Receive(_)) {
+            if !matches!(
+                value.0,
+                ExprType::In(InputType::Normal) | ExprType::Receive(_)
+            ) {
                 return self.err(
                     "assigned value must be an `in` expression or a receive expression",
                     assignment.location.clone(),

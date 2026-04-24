@@ -59,11 +59,24 @@ impl<K: ?Sized, V> PtrMap<K, V> {
     pub fn iter(&self) -> Iter<'_, K, V> {
         IntoIterator::into_iter(self)
     }
+
+    pub fn drain(&mut self) -> Drain<'_, K, V> {
+        Drain(self.0.drain())
+    }
 }
 
 impl<K: ?Sized, V: Clone> Clone for PtrMap<K, V> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
+    }
+}
+
+impl<K: ?Sized, V: Default> PtrMap<K, V> {
+    pub fn get_or_insert_default(&mut self, key: Rc<K>) -> &mut V {
+        match self.0.entry(RcHashWrap(key)) {
+            Entry::Occupied(occupied) => occupied.into_mut(),
+            Entry::Vacant(entry) => entry.insert(V::default()),
+        }
     }
 }
 
@@ -120,5 +133,16 @@ impl<K: ?Sized, V> Index<&Rc<K>> for PtrMap<K, V> {
 
     fn index(&self, index: &Rc<K>) -> &Self::Output {
         self.get(Rc::clone(index)).expect("key not found in PtrMap")
+    }
+}
+
+pub struct Drain<'a, K: ?Sized, V>(pub collections::hash_map::Drain<'a, RcHashWrap<K>, V>);
+
+impl<'a, K: ?Sized, V> Iterator for Drain<'a, K, V> {
+    type Item = (Rc<K>, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (RcHashWrap(k), v) = self.0.next()?;
+        Some((k, v))
     }
 }

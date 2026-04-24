@@ -25,3 +25,9 @@ fin:
 move y, tmp_y
 jump_unless else
 
+Update for Captures:
+1. For every existing captured variable, if it is not the last target, load it to a new nonzero temporary register.
+   In assign-else, preallocate registers for all new captured variables and initialize with .Undefined.
+2. See above.
+3. Store values into all captures.
+4. See above.

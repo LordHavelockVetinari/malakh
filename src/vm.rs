@@ -17,6 +17,8 @@ pub mod symbol;
 pub mod user_process;
 pub mod value;
 
+use std::fmt::{self, Debug};
+
 pub use instruction::Instruction;
 use user_process::UserProcessRef;
 pub use value::Value;
@@ -30,7 +32,6 @@ use crate::vm::options::VmOptions;
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::user_process::UserProcessFamily;
 
-#[derive(Debug)]
 pub struct Vm {
     constants: Vec<Value>,
     user_process_families: Vec<&'static UserProcessFamily>,
@@ -207,6 +208,32 @@ impl Vm {
         loop {
             self.step();
         }
+    }
+}
+
+impl Debug for Vm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "######## VM ########")?;
+        writeln!(f, "CONSTANTS:")?;
+        for (i, c) in self.constants.iter().enumerate() {
+            writeln!(f, "{}: {:?}", i, c)?;
+        }
+        writeln!(f, "GLOBAL VARIABLES:")?;
+        for (i, v) in self.global_variables.iter().enumerate() {
+            writeln!(f, "{}: {:?}", i, v)?;
+        }
+        writeln!(f, "BUILTIN PROCESS FAMILIES:")?;
+        for (i, families) in self.builtin_process_families.chunks(8).enumerate() {
+            for (j, family) in families.iter().enumerate() {
+                write!(f, "{}: {}, ", 8 * i + j, family.name)?;
+            }
+            writeln!(f)?;
+        }
+        writeln!(f, "USER PROCESS FAMILIES:")?;
+        for (i, family) in self.user_process_families.iter().enumerate() {
+            writeln!(f, "{}: {:#4?}, ", i, family)?;
+        }
+        writeln!(f, "####################")
     }
 }
 

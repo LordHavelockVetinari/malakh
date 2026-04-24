@@ -1,0 +1,14 @@
+Foo -> {
+    steps := 0
+    while i := [Range Infinity] {
+        fork in
+        if i != 0 {
+            out i
+        }
+    }
+}
+
+Main -> {
+    foo := Foo
+    out [foo .Spam .Spam] [foo .Spam .Spam] [foo .Spam .Spam]
+}

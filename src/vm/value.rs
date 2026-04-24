@@ -627,6 +627,8 @@ impl Debug for Value {
             write!(f, "<process at {:p}>", proc.0)
         } else if let Some(proc) = self.as_builtin_process_ref() {
             write!(f, "<{} process at {:p}>", proc.type_name(), proc.0)
+        } else if let Some(capture) = self.as_capture_ref() {
+            write!(f, "<capture: {:?}>", capture.value())
         } else {
             write!(
                 f,

@@ -1,0 +1,47 @@
+Counter -> {
+    count := 0
+    switch fork in {
+    
+    case .Inc:
+        count += 1
+    
+    case .Dec:
+        count -= 1
+    
+    }
+    out count
+}
+
+SharingTest -> {
+    shared := 0
+    fork in
+    partiallyShared := 0
+    fork in
+    private := 0
+    shared += 1
+    partiallyShared += 1
+    private += 1
+    out [Cat shared partiallyShared private]
+}
+
+Main -> {
+    out "Counter Test"
+    c := Counter
+    out [c .Inc] [c .Inc]
+    AssertErr (c .Foo)
+    out [c .Dec]
+    dec := c .Dec
+    out [c .Inc] [dec]
+
+    out "Sharing Test"
+    st1 := SharingTest
+    st2 := SharingTest
+    out [st1 .Spam .Ham]
+    out [st1 .Spam .Ham]
+    st11 := st1 .Spam
+    out [st11 .Ham] [st11 .Ham]
+    out [st2 .Spam .Ham]
+    Assert ([Process::State st1] == .ForkIn)
+    Assert ([Process::State st2] == .ForkIn)
+    Assert ([Process::State st11] == .ForkIn)
+}

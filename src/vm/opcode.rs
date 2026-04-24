@@ -83,12 +83,13 @@ opcodes! {
     OUT (3) = 70;
     IN (3) = 72;
     OPT_IN (3) = 73;
-    RECEIVE (3) = 75;
-    TRY_RECEIVE (3) = 76;
-    PEEK (3) = 77;
-    SEND (3) = 78;
-    NO_IN (3) = 79;
-    STATE (3) = 80;
+    FORK_IN (3) = 74;
+    RECEIVE (3) = 80;
+    TRY_RECEIVE (3) = 81;
+    PEEK (3) = 82;
+    SEND (3) = 83;
+    NO_IN (3) = 84;
+    STATE (3) = 85;
     NEW_ERROR (2) = 90;
     EXTEND_ERROR (3) = 91;
     ERR (3) = 92;
@@ -511,6 +512,13 @@ fn run_opt_in(vm: &mut Vm, inst: Instruction) {
     vm.pause_user_process();
 }
 
+fn run_fork_in(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), FORK_IN);
+    let mut proc = vm.current_process();
+    *proc.state_mut() = ProcessState::ForkIn;
+    vm.pause_user_process();
+}
+
 fn run_receive(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), RECEIVE);
     let (dst, src, _) = inst.as_three_operand();
@@ -648,7 +656,15 @@ fn run_send(vm: &mut Vm, inst: Instruction) {
             *proc.state_mut() = ProcessState::Run;
             vm.enter_user_process(proc);
         }
-        (ProcessState::ForkIn, Right(_)) => todo!("send to user process in ForkIn state"),
+        (ProcessState::ForkIn, Right(mut proc)) => {
+            let mut child = proc.fork(&mut vm.gc);
+            *vm.register_mut(dst) = Value::from(child);
+            let fork_inst = unsafe { *child.instruction_pointer().sub(1) };
+            debug_assert_eq!(fork_inst.opcode(), FORK_IN);
+            let (value_dst, _, _) = fork_inst.as_three_operand();
+            child.memory_mut()[value_dst as usize] = src2;
+            vm.enter_user_process(child);
+        }
         (ProcessState::Err, Left(p)) => vm.propagate_error(p),
         (ProcessState::Err, Right(p)) => vm.propagate_error(p),
         _ => throw_from_current_process!(
@@ -894,6 +910,7 @@ static OPCODE_TABLE: [InstructionFn; 256] = {
     table[OUT as usize] = run_out;
     table[IN as usize] = run_in;
     table[OPT_IN as usize] = run_opt_in;
+    table[FORK_IN as usize] = run_fork_in;
     table[RECEIVE as usize] = run_receive;
     table[TRY_RECEIVE as usize] = run_try_receive;
     table[PEEK as usize] = run_peek;
