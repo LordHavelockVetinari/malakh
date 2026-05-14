@@ -83,16 +83,16 @@ Hopefully, they will all be added soon:
 Output
 ------
 
-Let's start with the famous "Hello, World!" program.
-In this program, we define the `Main` process,
-which is responsible for communicating with the user.
-Inside `Main`, we use the `out` command to send output to the user.
+Let's start with the famous "Hello, World!" program:
 
     Main -> {
         out "Hello, World!"
     }
 
-The program outputs "Hello, World!".
+In this program, we define the `Main` process,
+which is responsible for communicating with the user.
+Inside `Main`, we use the `out` command to send output to the user.
+The program outputs: "Hello, World!".
 
 A program can also write multiple outputs:
 
