@@ -110,8 +110,9 @@ impl BuiltinProcessData for Map {
             return BuiltinProcessRef::new(family, Some(process), vm);
         };
         let family = vm.get_builtin_family(index);
-        #[cfg(debug_assertions)]
-        vm.assert_temporary1_none();
+        if cfg!(debug_assertions) {
+            vm.assert_temporary1_none();
+        }
         BuiltinProcessRef::new(family, Some(process), vm)
     }
 
