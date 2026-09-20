@@ -3,9 +3,10 @@ use std::rc::Rc;
 use hashbrown::HashMap;
 
 use crate::compile::error::CompilationError;
+use crate::compile::forking_loops::find_all_forking_loops;
 use crate::parse::tree::{
-    Assignment, AssignmentTarget, AssignmentType, CodeVisitor, DefaultCodeVisitor, Expr, ExprType,
-    InputType, ResultCodeVisitor, Stmt, StmtType,
+    Assignment, AssignmentTarget, AssignmentType, CodeFile, CodeVisitor, Condition,
+    DefaultCodeVisitor, Expr, ExprType, InputType, ResultCodeVisitor, Stmt, StmtType, TryBlock,
 };
 use crate::util::ptr_map::PtrMap;
 use crate::util::ptr_set::PtrSet;
@@ -28,29 +29,22 @@ struct CapturingContext {
     nesting_level: u64,
 }
 
-pub struct CaptureAnalyzer {
-    nesting_level: u64,
-    variables: HashMap<String, VariableInfo>,
-    capturing_contexts: Vec<CapturingContext>,
-    assignment_to_declaration: PtrMap<AssignmentTarget, Rc<AssignmentTarget>>,
+pub struct CaptureAnalysis {
     pub process_literal_captures: PtrMap<Expr, PtrSet<AssignmentTarget>>,
     pub constructor_captures: PtrMap<AssignmentTarget, PtrSet<AssignmentTarget>>,
     pub capture_assignment_targets: PtrSet<AssignmentTarget>,
 }
 
-impl CaptureAnalyzer {
-    pub fn new() -> Self {
-        Self {
-            nesting_level: 0,
-            variables: HashMap::new(),
-            capturing_contexts: Vec::new(),
-            assignment_to_declaration: PtrMap::new(),
-            process_literal_captures: PtrMap::new(),
-            constructor_captures: PtrMap::new(),
-            capture_assignment_targets: PtrSet::new(),
-        }
-    }
+struct CaptureAnalyzer {
+    nesting_level: u64,
+    variables: HashMap<String, VariableInfo>,
+    capturing_contexts: Vec<CapturingContext>,
+    assignment_to_declaration: PtrMap<AssignmentTarget, Rc<AssignmentTarget>>,
+    forking_loops: PtrSet<Stmt>,
+    result: CaptureAnalysis,
+}
 
+impl CaptureAnalyzer {
     fn add_reference_helper(
         &mut self,
         name: &str,
@@ -77,12 +71,14 @@ impl CaptureAnalyzer {
             match &ctx.typ {
                 CapturingContextType::ProcessLiteral(expr) => {
                     let captures = self
+                        .result
                         .process_literal_captures
                         .get_or_insert_default(Rc::clone(expr));
                     captures.insert(Rc::clone(&var_info.declaration));
                 }
                 CapturingContextType::Constructor(cons) => {
                     let captures = self
+                        .result
                         .constructor_captures
                         .get_or_insert_default(Rc::clone(cons));
                     captures.insert(Rc::clone(&var_info.declaration));
@@ -98,7 +94,7 @@ impl CaptureAnalyzer {
             && var_info.is_written
         {
             let decl = Rc::clone(&var_info.declaration);
-            self.capture_assignment_targets.insert(decl);
+            self.result.capture_assignment_targets.insert(decl);
         }
     }
 }
@@ -164,6 +160,7 @@ impl DefaultCodeVisitor for CaptureAnalyzer {
     }
 
     fn visit_assignment_stmt(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        // Note: visit_assignment_stmt is not called for while-assign loops.
         let Stmt(StmtType::Assignment(assignment), _) = &**stmt else {
             unreachable!();
         };
@@ -226,15 +223,86 @@ impl DefaultCodeVisitor for CaptureAnalyzer {
         Ok(())
     }
 
+    fn visit_try(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        let Stmt(StmtType::Try(TryBlock { body, cases }), _) = &**stmt else {
+            unreachable!();
+        };
+        self.visit_many(body)?;
+        let mut final_nesting_level = self.nesting_level;
+        for case in cases {
+            if let Some(values) = &case.values {
+                self.visit_many(values)?;
+            }
+            let old_nesting_level = self.nesting_level;
+            self.visit_many(&case.body)?;
+            final_nesting_level = final_nesting_level.max(self.nesting_level);
+            self.nesting_level = old_nesting_level;
+        }
+        self.nesting_level = final_nesting_level;
+        Ok(())
+    }
+
+    fn visit_loop(&mut self, stmt: &Rc<Stmt>) -> Result<(), Self::Error> {
+        let Stmt(StmtType::Loop(cond, body), _) = &**stmt else {
+            unreachable!();
+        };
+        let mut reevaluated_conditions = Vec::new();
+        let mut assignment_targets = Vec::new();
+        match cond {
+            None => {}
+            Some(Condition::Boolean(boolean)) => {
+                reevaluated_conditions.push(boolean);
+            }
+            Some(Condition::Assignment(asgn)) => {
+                let Stmt(StmtType::Assignment(assignment), _) = &**asgn else {
+                    unreachable!();
+                };
+                for value in &assignment.values {
+                    if matches!(value.0, ExprType::Receive(_)) {
+                        self.visit(value)?;
+                    } else {
+                        reevaluated_conditions.push(value);
+                    }
+                }
+                assignment_targets = assignment.targets.clone();
+            }
+        }
+        if self.forking_loops.contains(Rc::clone(stmt)) {
+            self.nesting_level += 1;
+        }
+        self.visit_many(&reevaluated_conditions)?;
+        self.visit_many(&assignment_targets)?;
+        self.visit_many(body)?;
+        Ok(())
+    }
+
     fn visit_global_assignment(&mut self, decl: &Rc<Assignment>) -> Result<(), Self::Error> {
         let old_nesting_level = self.nesting_level;
         self.visit_many(&decl.values)?;
         self.nesting_level = old_nesting_level;
         for (assignment, declaration) in self.assignment_to_declaration.drain() {
-            if self.capture_assignment_targets.contains(declaration) {
-                self.capture_assignment_targets.insert(assignment);
+            if self.result.capture_assignment_targets.contains(declaration) {
+                self.result.capture_assignment_targets.insert(assignment);
             }
         }
         Ok(())
     }
+}
+
+pub fn analyze_captures(code: &Rc<CodeFile>) -> Result<CaptureAnalysis, CompilationError> {
+    let forking_loops = find_all_forking_loops(code)?;
+    let mut analyzer = CaptureAnalyzer {
+        nesting_level: 0,
+        variables: HashMap::new(),
+        capturing_contexts: Vec::new(),
+        assignment_to_declaration: PtrMap::new(),
+        forking_loops,
+        result: CaptureAnalysis {
+            process_literal_captures: PtrMap::new(),
+            constructor_captures: PtrMap::new(),
+            capture_assignment_targets: PtrSet::new(),
+        },
+    };
+    analyzer.visit(code)?;
+    Ok(analyzer.result)
 }

@@ -204,29 +204,31 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         let AssignmentType::AugmentedAssignment(op) = target.typ else {
             panic!("expected an augmented assignment");
         };
+        let is_captured = self.is_captured(target);
         let var_reg = self.get_assignment_index(target)?;
-        let rhs_reg = self
-            .compiler
-            .compile_expr(value, RegisterChoice::Any, self.builder)?;
-        if self.is_captured(target) {
-            let tmp_reg = self
+        let lhs_reg = if is_captured {
+            let lhs_reg = self
                 .builder
                 .register_allocator_mut()
                 .alloc_temporary(&target.location)?;
-            rhs_reg.dealloc(self.builder.register_allocator_mut());
-            self.builder.register_allocator_mut().dealloc(tmp_reg);
             self.builder.add_code(code! {
-                LOAD_CAPTURE tmp_reg, var_reg, 0;
+                LOAD_CAPTURE lhs_reg, var_reg, 0;
             });
-            self.compiler
-                .compile_binary_op(op, tmp_reg, rhs_reg.index, tmp_reg, self.builder);
-            self.builder.add_code(code! {
-                STORE_CAPTURE var_reg, tmp_reg, 0;
-            });
+            lhs_reg
         } else {
-            rhs_reg.dealloc(self.builder.register_allocator_mut());
-            self.compiler
-                .compile_binary_op(op, var_reg, rhs_reg.index, var_reg, self.builder);
+            var_reg
+        };
+        let rhs_reg = self
+            .compiler
+            .compile_expr(value, RegisterChoice::Any, self.builder)?;
+        self.compiler
+            .compile_binary_op(op, lhs_reg, rhs_reg.index, lhs_reg, self.builder);
+        rhs_reg.dealloc(self.builder.register_allocator_mut());
+        if is_captured {
+            self.builder.register_allocator_mut().dealloc(lhs_reg);
+            self.builder.add_code(code! {
+                STORE_CAPTURE var_reg, lhs_reg, 0;
+            });
         }
         Ok(())
     }

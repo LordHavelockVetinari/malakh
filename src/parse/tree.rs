@@ -52,7 +52,7 @@ pub struct Argument {
     pub location: Location,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum InputType {
     Normal,
     Fork,
@@ -302,6 +302,12 @@ impl VisitableCode for GlobalDeclaration {
             GlobalDeclaration::Assignment(decl) => visitor.visit_global_assignment(decl),
             GlobalDeclaration::Import(decl) => visitor.visit_import_declaration(decl),
         }
+    }
+}
+
+impl<T: VisitableCode> VisitableCode for &T {
+    fn accept_visitor<V: CodeVisitor>(&self, visitor: &mut V) -> V::Output {
+        T::accept_visitor(self, visitor)
     }
 }
 

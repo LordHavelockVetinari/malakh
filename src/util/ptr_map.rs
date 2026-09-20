@@ -39,6 +39,10 @@ impl<K: ?Sized, V> PtrMap<K, V> {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     pub fn insert(&mut self, key: Rc<K>, value: V) -> Option<V> {
         self.0.insert(RcHashWrap(key), value)
     }
@@ -50,6 +54,10 @@ impl<K: ?Sized, V> PtrMap<K, V> {
                 entry.insert(value);
             }
         }
+    }
+
+    pub fn remove(&mut self, key: &Rc<K>) -> Option<V> {
+        self.0.remove(&RcHashWrap(Rc::clone(key)))
     }
 
     pub fn get(&self, key: Rc<K>) -> Option<&V> {

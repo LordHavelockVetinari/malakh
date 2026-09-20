@@ -22,7 +22,7 @@ impl GlobalVariable {
             let Some(initializer_family) = self.initializer_family else {
                 panic!("tried to initialize global variable with no initializer");
             };
-            let initializer = UserProcessRef::new(initializer_family, &mut vm.gc);
+            let initializer = UserProcessRef::new(initializer_family, &mut vm.gc, &[]);
             vm.enter_user_process(initializer);
         }
     }

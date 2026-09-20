@@ -1,0 +1,30 @@
+Main -> {
+    x := 1
+    out x
+    ({ x = 2 })
+    out x
+    { x = in } 3
+    out x
+    setX := { x = fork in }
+    setX "foo"
+    out x
+    setX "bar"
+    out x
+    x = 100
+    foo := {out x x}
+    x = 200
+    out [foo] [foo]
+
+    (x), y := "foo", "bar"
+    swap := {
+        out x y
+        x, y = y, x
+        out x y
+    }
+    x, y = "baz", "quux"
+    out [swap] [swap] [swap] [swap] x y
+
+    i := 10
+    i += [{ i += 100; out i }]
+    out i
+}

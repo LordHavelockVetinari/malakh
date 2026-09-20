@@ -1,0 +1,20 @@
+x := 1
+
+Main -> {
+    y := 2
+    foo := {
+        z := 3
+        bar := {
+            w := 4
+            y += x
+            z += y
+            w += z
+            User x y z w
+        }
+        y *= x
+        z *= y
+        User x y z
+    }
+    y -= x
+    User x y
+}

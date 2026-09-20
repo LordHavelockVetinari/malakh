@@ -1,12 +1,14 @@
 mod assignment;
-mod capture_analyzer;
+mod capture_analysis;
 mod environment;
 mod error;
+mod forking_loops;
 mod module;
 mod process_family_builder;
 mod process_family_collector;
 mod register_allocator;
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use assert_matches::assert_matches;
@@ -14,7 +16,7 @@ use either::Either::{Left, Right};
 
 use crate::builtin;
 use crate::compile::assignment::{AssignmentCompilationResult, AssignmentContext};
-use crate::compile::capture_analyzer::CaptureAnalyzer;
+use crate::compile::capture_analysis::{CaptureAnalysis, analyze_captures};
 use crate::compile::environment::{GlobalDefinition, LocalDefinition};
 use crate::compile::error::CompilationError;
 use crate::compile::module::Module;
@@ -23,9 +25,9 @@ use crate::compile::process_family_collector::ProcessFamilyCollector;
 use crate::compile::register_allocator::{ChosenRegister, RegisterChoice};
 use crate::parse::location::Location;
 use crate::parse::tree::{
-    Argument, ArgumentType, Assignment, AssignmentType, BinaryOperator, CodeFile, CodeVisitor,
-    Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, InputType, JumpType, RaiseType,
-    Stmt, StmtType, TryBlock, UnaryOperator,
+    Argument, ArgumentType, Assignment, AssignmentTarget, AssignmentType, BinaryOperator, CodeFile,
+    CodeVisitor, Condition, ConstantLiteral, Expr, ExprType, GlobalDeclaration, InputType,
+    JumpType, RaiseType, Stmt, StmtType, TryBlock, UnaryOperator,
 };
 use crate::vm::builder::VmBuilder;
 use crate::vm::macros::{code, instruction};
@@ -34,7 +36,7 @@ use crate::vm::{Value, Vm};
 pub struct Compiler {
     code: Rc<CodeFile>,
     processes: ProcessFamilyCollector,
-    captures: CaptureAnalyzer,
+    captures: CaptureAnalysis,
     // The root module contains all the modules in the program.
     root_module: Module,
     const_undefined_index: u32,
@@ -46,7 +48,7 @@ impl Compiler {
         let mut this = Self {
             code: Rc::clone(&code),
             processes: ProcessFamilyCollector::new(),
-            captures: CaptureAnalyzer::new(),
+            captures: analyze_captures(&code)?,
             root_module: Module::new(),
             const_undefined_index: 0,
             output: VmBuilder::new(),
@@ -61,7 +63,6 @@ impl Compiler {
             .constant(Value::UNDEFINED)
             .expect("failed to create constant Undefined");
         this.processes.visit(&code)?;
-        this.captures.visit(&code)?;
         Ok(this)
     }
 
@@ -265,6 +266,33 @@ impl Compiler {
         })
     }
 
+    fn set_capture_indices(
+        &mut self,
+        process_literal: &Rc<Expr>,
+        current_builder: &mut ProcessFamilyBuilder,
+        inner_builder: &mut ProcessFamilyBuilder,
+    ) {
+        let capture_indices: HashMap<String, u16> = self
+            .captures
+            .process_literal_captures
+            .get(Rc::clone(process_literal))
+            .into_iter()
+            .flat_map(|set| set.iter())
+            .filter_map(
+                |var| match current_builder.environment().get_definition(&var.name) {
+                    Some(Right(
+                        &LocalDefinition::Variable { index }
+                        | &LocalDefinition::CapturedVariable { index },
+                    )) => Some((var.name.clone(), index)),
+                    None => None,
+                    Some(Left(_)) => None,
+                    Some(Right(LocalDefinition::Constructor { .. })) => None,
+                },
+            )
+            .collect();
+        inner_builder.init_capture_indices(capture_indices);
+    }
+
     fn compile_expr(
         &mut self,
         expr: &Rc<Expr>,
@@ -296,6 +324,11 @@ impl Compiler {
                 let output_reg =
                     register_choice.or_alloc(builder.register_allocator_mut(), &expr.1)?;
                 let family = self.processes.process_literal_map[expr];
+                self.set_capture_indices(
+                    expr,
+                    builder,
+                    &mut Rc::clone(&self.processes.process_families[family as usize]).borrow_mut(),
+                );
                 builder.add_code(code! {
                     NEW output_reg.index, family;
                 });
@@ -510,7 +543,7 @@ impl Compiler {
             Condition::Assignment(stmt) => {
                 builder.enter_new_scope();
                 let StmtType::Assignment(assignment) = &stmt.0 else {
-                    return CompilationError::err("expected an assignment", &stmt.1);
+                    unreachable!();
                 };
                 assignment::compile(self, builder, Rc::clone(assignment), context)
             }
@@ -957,6 +990,15 @@ impl Compiler {
         let Expr(ExprType::ProcessLiteral(stmts), _) = &*literal else {
             panic!("expected a process literal expression");
         };
+        let capture_order: Vec<Rc<AssignmentTarget>> = self
+            .captures
+            .process_literal_captures
+            .get(Rc::clone(&literal))
+            .into_iter()
+            .flat_map(|set| set.iter())
+            .cloned()
+            .collect();
+        builder.init_capture_order(capture_order)?;
         for stmt in stmts {
             self.compile_stmt(stmt, builder)?;
         }
@@ -986,14 +1028,18 @@ impl Compiler {
             STORE out_reg.index, global_index;
             STOP 0, 0, 0;
         });
+        builder.set_non_capturing()?;
         Ok(())
     }
 
-    fn compile_constructor(
+    fn compile_global_constructor(
         &mut self,
         constructor: Rc<Assignment>,
         builder: &mut ProcessFamilyBuilder,
     ) -> Result<(), CompilationError> {
+        assert!(constructor.targets.len() == 1);
+        assert!(constructor.targets[0].typ == AssignmentType::Constructor);
+        assert!(constructor.values.len() == 1);
         let value = &constructor.values[0];
         let reg = self.compile_expr(value, RegisterChoice::Existing(0), builder)?;
         reg.dealloc(builder.register_allocator_mut());
@@ -1001,6 +1047,7 @@ impl Compiler {
             OUT 0, 0, 0;
             STOP 0, 0, 0;
         });
+        builder.set_non_capturing()?;
         Ok(())
     }
 
@@ -1017,7 +1064,8 @@ impl Compiler {
 
     fn add_initial_process(&mut self) -> Result<(), CompilationError> {
         let family = {
-            let mut builder = ProcessFamilyBuilder::new();
+            let mut builder = ProcessFamilyBuilder::new(Location::default());
+            builder.set_non_capturing()?;
             let alloc = builder.register_allocator_mut();
             let reg1 = alloc.alloc(&Location::default())?;
             let reg2 = alloc.alloc(&Location::default())?;
@@ -1131,7 +1179,7 @@ impl Compiler {
                 AssignmentType::Constructor => {
                     let family = self.processes.constructor_map[&assignment];
                     let builder = Rc::clone(&self.processes.process_families[family as usize]);
-                    self.compile_constructor(assignment, &mut builder.borrow_mut())?;
+                    self.compile_global_constructor(assignment, &mut builder.borrow_mut())?;
                 }
                 _ => unreachable!(),
             }

@@ -1,9 +1,13 @@
+use std::cell::OnceCell;
+use std::collections::HashMap;
 use std::mem;
+use std::rc::Rc;
 
-use crate::compile::environment::ProcessEnvironment;
+use crate::compile::environment::{LocalDefinition, ProcessEnvironment};
 use crate::compile::error::CompilationError;
 use crate::compile::register_allocator::RegisterAllocator;
 use crate::parse::location::Location;
+use crate::parse::tree::AssignmentTarget;
 use crate::vm::Instruction;
 use crate::vm::user_process::{TryBody, UserProcessFamily};
 
@@ -19,6 +23,7 @@ pub struct TryBuilder {
 }
 
 pub struct ProcessFamilyBuilder {
+    location: Location,
     code: Vec<Instruction>,
     register_allocator: RegisterAllocator,
     environment: ProcessEnvironment,
@@ -26,11 +31,14 @@ pub struct ProcessFamilyBuilder {
     loops: Vec<LoopContext>,
     try_starts: Vec<usize>,
     try_builders: Vec<TryBuilder>,
+    capture_order: OnceCell<Vec<String>>,
+    capture_indices: OnceCell<HashMap<String, u16>>,
 }
 
 impl ProcessFamilyBuilder {
-    pub fn new() -> Self {
+    pub fn new(location: Location) -> Self {
         let mut this = Self {
+            location,
             code: vec![],
             register_allocator: RegisterAllocator::new(),
             environment: ProcessEnvironment::new(),
@@ -38,6 +46,8 @@ impl ProcessFamilyBuilder {
             loops: Vec::new(),
             try_starts: Vec::new(),
             try_builders: Vec::new(),
+            capture_order: OnceCell::new(),
+            capture_indices: OnceCell::new(),
         };
         this.enter_new_scope();
         this
@@ -165,6 +175,35 @@ impl ProcessFamilyBuilder {
         });
     }
 
+    pub fn init_capture_indices(&mut self, indices: HashMap<String, u16>) {
+        self.capture_indices
+            .set(indices)
+            .expect("capture_indices should be uninitialized");
+    }
+
+    pub fn init_capture_order(
+        &mut self,
+        capture_order: Vec<Rc<AssignmentTarget>>,
+    ) -> Result<(), CompilationError> {
+        let names: Vec<String> = capture_order.iter().map(|var| var.name.clone()).collect();
+        self.capture_order
+            .set(names)
+            .expect("capture_order should be uninitialized");
+        for var in capture_order {
+            let index = self.register_allocator.alloc(&self.location)?;
+            let definition = LocalDefinition::CapturedVariable { index };
+            self.environment
+                .add_local(var.name.clone(), definition, &var.location)?;
+        }
+        Ok(())
+    }
+
+    pub fn set_non_capturing(&mut self) -> Result<(), CompilationError> {
+        self.init_capture_indices(HashMap::new());
+        self.init_capture_order(Vec::new())?;
+        Ok(())
+    }
+
     pub fn build(&mut self) -> UserProcessFamily {
         self.exit_scope();
         assert!(
@@ -185,10 +224,25 @@ impl ProcessFamilyBuilder {
             .collect::<Vec<_>>()
             .leak();
         try_bodies.sort_unstable_by_key(|body| body.end.addr() - body.start.addr());
+        let capture_indices = self
+            .capture_indices
+            .get()
+            .expect("capture_indices should be initialized");
+        let capture_order = self
+            .capture_order
+            .get()
+            .expect("capture_order should be uninitialized");
+        assert!(capture_indices.len() == capture_order.len());
+        let capture_indices = capture_order
+            .iter()
+            .map(|name| capture_indices[name])
+            .collect::<Vec<u16>>()
+            .leak();
         UserProcessFamily {
             code,
             memory_len: self.register_allocator.required_num_registers(),
             try_bodies,
+            capture_indices,
         }
     }
 }

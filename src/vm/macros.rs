@@ -17,14 +17,6 @@ macro_rules! code {
     };
 }
 
-macro_rules! const_code {
-    ($($opcode:ident $($params:expr),*;)*) => {
-        const {
-            $crate::vm::macros::code!($($opcode $($params),*;)*)
-        }
-    };
-}
-
 macro_rules! vec_code {
     ($($opcode:ident $($params:expr),*;)*) => {
         vec![
@@ -41,4 +33,4 @@ macro_rules! leak_code {
     };
 }
 
-pub(crate) use {code, const_code, instruction, leak_code, vec_code};
+pub(crate) use {code, instruction, leak_code, vec_code};

@@ -41,16 +41,16 @@ impl ProcessFamilyCollector {
         }
     }
 
-    fn new_family(&mut self, location: &Location) -> Result<u32, CompilationError> {
+    fn new_family(&mut self, location: Location) -> Result<u32, CompilationError> {
         let index = self.process_families.len();
         let Ok(index) = u32::try_from(index) else {
             return CompilationError::err(
                 "too many process types (current limit is 4294967295)",
-                location,
+                &location,
             );
         };
         self.process_families
-            .push(Rc::new(RefCell::new(ProcessFamilyBuilder::new())));
+            .push(Rc::new(RefCell::new(ProcessFamilyBuilder::new(location))));
         Ok(index)
     }
 
@@ -123,7 +123,7 @@ impl DefaultCodeVisitor for ProcessFamilyCollector {
     type Error = CompilationError;
 
     fn visit_process_literal(&mut self, expr: &std::rc::Rc<Expr>) -> Result<(), Self::Error> {
-        let index = self.new_family(&expr.1)?;
+        let index = self.new_family(expr.1.clone())?;
         self.process_literal_map.insert(Rc::clone(expr), index);
         let Expr(ExprType::ProcessLiteral(stmts), _) = &**expr else {
             panic!("visitor method got wrong variant");
@@ -163,13 +163,13 @@ impl DefaultCodeVisitor for ProcessFamilyCollector {
                 );
             }
             AssignmentType::Declaration => {
-                let family_index = self.new_family(&decl.location)?;
+                let family_index = self.new_family(decl.location.clone())?;
                 self.lazy_initializer_map
                     .insert(Rc::clone(decl), family_index);
                 self.new_global(Rc::clone(decl))?;
             }
             AssignmentType::Constructor => {
-                let index = self.new_family(&decl.location)?;
+                let index = self.new_family(decl.location.clone())?;
                 self.constructor_map.insert(Rc::clone(decl), index);
             }
         }

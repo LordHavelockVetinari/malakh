@@ -19,6 +19,7 @@ pub struct UserProcessFamily {
     pub code: &'static [Instruction],
     pub memory_len: usize,
     pub try_bodies: &'static [TryBody],
+    pub capture_indices: &'static [u16],
 }
 
 // A process consists of a process header followed by one or more Values,
@@ -120,7 +121,11 @@ impl UserProcessRef {
         )
     }
 
-    pub fn new(family: &'static UserProcessFamily, gc: &mut GarbageCollector) -> Self {
+    pub fn new(
+        family: &'static UserProcessFamily,
+        gc: &mut GarbageCollector,
+        outer_memory: &[Value],
+    ) -> Self {
         let mut this = unsafe { Self::new_uninit(family) };
         unsafe {
             this.0.write(UserProcessHeader {
@@ -130,10 +135,17 @@ impl UserProcessRef {
                 state: ProcessState::Run,
                 can_resume: false,
             });
-            this.memory_uninit()
-                .as_mut()
-                .unwrap()
-                .fill(MaybeUninit::new(Value::ZERO));
+        }
+        let memory = unsafe { this.memory_uninit().as_mut() }.unwrap();
+        if family.capture_indices.is_empty() {
+            memory.fill(MaybeUninit::new(Value::ZERO));
+        } else {
+            memory[0] = MaybeUninit::new(Value::ZERO);
+            let (captures, remainder) = memory[1..].split_at_mut(family.capture_indices.len());
+            for (reg, &index) in captures.iter_mut().zip(family.capture_indices) {
+                *reg = MaybeUninit::new(outer_memory[index as usize]);
+            }
+            remainder.fill(MaybeUninit::new(Value::ZERO));
         }
         gc.start_tracking(Value::from(this), family.layout().size());
         this

@@ -1,5 +1,5 @@
 Foo -> {
-    steps := 0
+    unused := 0
     while i := [Range Infinity] {
         fork in
         if i != 0 {
@@ -8,7 +8,23 @@ Foo -> {
     }
 }
 
+Bar -> {
+    count := 100
+    loop {
+        count += 1
+        out count
+        fork in
+    }
+}
+
 Main -> {
     foo := Foo
     out [foo .Spam .Spam] [foo .Spam .Spam] [foo .Spam .Spam]
+
+    bar := Bar
+    out [bar]
+    bar1 := bar .Spam
+    out [bar1] [bar1 .Spam]
+    bar2 := bar .Spam
+    out [bar2] [bar2 .Spam] [bar2 .Spam]
 }

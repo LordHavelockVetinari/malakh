@@ -469,7 +469,7 @@ fn run_new(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), NEW);
     let (dst, src) = inst.as_two_operand();
     let family = vm.user_process_families[src as usize];
-    let proc = UserProcessRef::new(family, &mut vm.gc);
+    let proc = UserProcessRef::new(family, &mut vm.gc, unsafe { &*vm.memory });
     *vm.register_mut(dst) = Value::from(proc);
     vm.enter_user_process(proc);
 }

@@ -3,7 +3,6 @@ pub mod builder;
 pub mod builtin_process;
 mod capture;
 pub mod error;
-pub mod examples;
 mod float;
 pub mod gc;
 mod global_variable;
@@ -23,7 +22,6 @@ pub use instruction::Instruction;
 use user_process::UserProcessRef;
 pub use value::Value;
 
-use crate::vm::builder::VmBuilder;
 use crate::vm::builtin_process::{BuiltinProcessFamily, BuiltinProcessRef};
 use crate::vm::error::ErrorRef;
 use crate::vm::gc::GarbageCollector;
@@ -47,10 +45,6 @@ pub struct Vm {
 }
 
 impl Vm {
-    pub fn builder() -> VmBuilder {
-        VmBuilder::new()
-    }
-
     pub fn get_builtin_family(&self, index: u32) -> &'static BuiltinProcessFamily {
         self.builtin_process_families[index as usize]
     }
