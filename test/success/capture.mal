@@ -27,4 +27,10 @@ Main -> {
     i := 10
     i += [{ i += 100; out i }]
     out i
+
+    x = {
+        x = 123
+        User x
+    }
+    Assert [IsProcess x]
 }
