@@ -34,7 +34,7 @@ pub enum LocalDefinition {
     Variable {
         index: u16,
     },
-    CapturedVariable {
+    MutablyCapturedVariable {
         index: u16,
     },
     #[allow(unused)]
@@ -113,7 +113,7 @@ impl ProcessEnvironment {
             match def {
                 LocalDefinition::Constructor { .. } => {}
                 LocalDefinition::Variable { index }
-                | LocalDefinition::CapturedVariable { index } => {
+                | LocalDefinition::MutablyCapturedVariable { index } => {
                     alloc.dealloc(index);
                 }
             }

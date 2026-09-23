@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::mem;
 use std::rc::Rc;
 
+use crate::compile::capture_analysis::CaptureAnalysis;
 use crate::compile::environment::{LocalDefinition, ProcessEnvironment};
 use crate::compile::error::CompilationError;
 use crate::compile::register_allocator::RegisterAllocator;
@@ -184,6 +185,7 @@ impl ProcessFamilyBuilder {
     pub fn init_capture_order(
         &mut self,
         capture_order: Vec<Rc<AssignmentTarget>>,
+        capture_analysis: &CaptureAnalysis,
     ) -> Result<(), CompilationError> {
         let names: Vec<String> = capture_order.iter().map(|var| var.name.clone()).collect();
         self.capture_order
@@ -191,7 +193,11 @@ impl ProcessFamilyBuilder {
             .expect("capture_order should be uninitialized");
         for var in capture_order {
             let index = self.register_allocator.alloc(&self.location)?;
-            let definition = LocalDefinition::CapturedVariable { index };
+            let definition = if capture_analysis.is_mutably_captured(Rc::clone(&var)) {
+                LocalDefinition::MutablyCapturedVariable { index }
+            } else {
+                LocalDefinition::Variable { index }
+            };
             self.environment
                 .add_local(var.name.clone(), definition, &var.location)?;
         }
@@ -200,7 +206,7 @@ impl ProcessFamilyBuilder {
 
     pub fn set_non_capturing(&mut self) -> Result<(), CompilationError> {
         self.init_capture_indices(HashMap::new());
-        self.init_capture_order(Vec::new())?;
+        self.init_capture_order(Vec::new(), &CaptureAnalysis::new())?;
         Ok(())
     }
 

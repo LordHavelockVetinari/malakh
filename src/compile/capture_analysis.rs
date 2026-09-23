@@ -281,7 +281,7 @@ impl DefaultCodeVisitor for CaptureAnalyzer {
         self.visit_many(&decl.values)?;
         self.nesting_level = old_nesting_level;
         for (assignment, declaration) in self.assignment_to_declaration.drain() {
-            if self.result.capture_assignment_targets.contains(declaration) {
+            if self.result.is_mutably_captured(declaration) {
                 self.result.capture_assignment_targets.insert(assignment);
             }
         }
@@ -297,12 +297,22 @@ pub fn analyze_captures(code: &Rc<CodeFile>) -> Result<CaptureAnalysis, Compilat
         capturing_contexts: Vec::new(),
         assignment_to_declaration: PtrMap::new(),
         forking_loops,
-        result: CaptureAnalysis {
-            process_literal_captures: PtrMap::new(),
-            constructor_captures: PtrMap::new(),
-            capture_assignment_targets: PtrSet::new(),
-        },
+        result: CaptureAnalysis::new(),
     };
     analyzer.visit(code)?;
     Ok(analyzer.result)
+}
+
+impl CaptureAnalysis {
+    pub fn new() -> Self {
+        Self {
+            process_literal_captures: PtrMap::new(),
+            constructor_captures: PtrMap::new(),
+            capture_assignment_targets: PtrSet::new(),
+        }
+    }
+
+    pub fn is_mutably_captured(&self, target: Rc<AssignmentTarget>) -> bool {
+        self.capture_assignment_targets.contains(target)
+    }
 }

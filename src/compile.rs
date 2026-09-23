@@ -282,7 +282,7 @@ impl Compiler {
                 |var| match current_builder.environment().get_definition(&var.name) {
                     Some(Right(
                         &LocalDefinition::Variable { index }
-                        | &LocalDefinition::CapturedVariable { index },
+                        | &LocalDefinition::MutablyCapturedVariable { index },
                     )) => Some((var.name.clone(), index)),
                     None => None,
                     Some(Left(_)) => None,
@@ -351,7 +351,7 @@ impl Compiler {
                     self.compile_move(output_reg.index, index, builder);
                     Ok(output_reg)
                 }
-                Some(Right(&LocalDefinition::CapturedVariable { index })) => {
+                Some(Right(&LocalDefinition::MutablyCapturedVariable { index })) => {
                     let output_reg =
                         register_choice.or_alloc(builder.register_allocator_mut(), &expr.1)?;
                     builder.add_code(code! {
@@ -823,12 +823,9 @@ impl Compiler {
             StmtType::Declaration(targets) => {
                 for target in targets {
                     let index = builder.register_allocator_mut().alloc(&target.location)?;
-                    let is_captured = self
-                        .captures
-                        .capture_assignment_targets
-                        .contains(Rc::clone(target));
-                    let definition = if is_captured {
-                        LocalDefinition::CapturedVariable { index }
+                    let is_mutably_captured = self.captures.is_mutably_captured(Rc::clone(target));
+                    let definition = if is_mutably_captured {
+                        LocalDefinition::MutablyCapturedVariable { index }
                     } else {
                         LocalDefinition::Variable { index }
                     };
@@ -840,7 +837,7 @@ impl Compiler {
                     builder.add_code(code! {
                         CONST index, self.const_undefined_index;
                     });
-                    if is_captured {
+                    if is_mutably_captured {
                         builder.add_code(code! {
                             CAPTURE index, index, 0;
                         });
@@ -998,7 +995,7 @@ impl Compiler {
             .flat_map(|set| set.iter())
             .cloned()
             .collect();
-        builder.init_capture_order(capture_order)?;
+        builder.init_capture_order(capture_order, &self.captures)?;
         for stmt in stmts {
             self.compile_stmt(stmt, builder)?;
         }

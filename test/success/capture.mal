@@ -33,4 +33,18 @@ Main -> {
         User x
     }
     Assert [IsProcess x]
+
+    const1, const2, const3 := 1, 2, 3
+    ({ User const1 const2 const3 })
+    ({ User const3 const2 const1 })
+    ({ User ((const1 + const2) * (const2 + const3)) })
+    ({
+        const4, const5, const6 := 4, 5, 6
+        ({
+            const7, const8, const9 := 7, 8, 9
+            ({
+                User const1 const4 const7 const9 const6 const3 const2 const5 const8
+            })
+        })
+    })
 }

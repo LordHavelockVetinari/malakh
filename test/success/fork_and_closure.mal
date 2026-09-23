@@ -1,0 +1,33 @@
+Foo -> {
+    unused1, unused2:
+    n := 0
+    inc := {
+        d := fork in
+        n += d
+        out n
+    }
+    a := fork in
+    out [inc a]
+}
+
+Bar -> {
+    unused1, unused2:
+    n := 13
+    nPlus := {
+        loop {
+            d := in
+            out (n + d)
+        }
+    }
+    d := fork in
+    out [nPlus d]
+}
+
+Main -> {
+    foo := Foo
+    out [foo 10] [foo 20] [foo 30]
+    foo = Foo
+    out [foo 11] [foo 22] [foo 33]
+    bar := Bar
+    out [bar 5] [bar 7] [bar (-3)]
+}

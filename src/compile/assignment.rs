@@ -63,11 +63,10 @@ struct AssignmentCompiler<'compiler, 'builder> {
 }
 
 impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
-    fn is_captured(&self, target: &Rc<AssignmentTarget>) -> bool {
+    fn is_mutably_captured(&self, target: &Rc<AssignmentTarget>) -> bool {
         self.compiler
             .captures
-            .capture_assignment_targets
-            .contains(Rc::clone(target))
+            .is_mutably_captured(Rc::clone(target))
     }
 
     fn validate_no_duplicate_targets(&self) -> Result<(), CompilationError> {
@@ -129,7 +128,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                 location,
             ),
             Some(Right(&LocalDefinition::Variable { index })) => Ok(index),
-            Some(Right(&LocalDefinition::CapturedVariable { index })) => Ok(index),
+            Some(Right(&LocalDefinition::MutablyCapturedVariable { index })) => Ok(index),
         }
     }
 
@@ -204,9 +203,9 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         let AssignmentType::AugmentedAssignment(op) = target.typ else {
             panic!("expected an augmented assignment");
         };
-        let is_captured = self.is_captured(target);
+        let is_mutably_captured = self.is_mutably_captured(target);
         let var_reg = self.get_assignment_index(target)?;
-        let lhs_reg = if is_captured {
+        let lhs_reg = if is_mutably_captured {
             let lhs_reg = self
                 .builder
                 .register_allocator_mut()
@@ -224,7 +223,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         self.compiler
             .compile_binary_op(op, lhs_reg, rhs_reg.index, lhs_reg, self.builder);
         rhs_reg.dealloc(self.builder.register_allocator_mut());
-        if is_captured {
+        if is_mutably_captured {
             self.builder.register_allocator_mut().dealloc(lhs_reg);
             self.builder.add_code(code! {
                 STORE_CAPTURE var_reg, lhs_reg, 0;
@@ -504,7 +503,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                             copy: new_reg,
                         },
                     );
-                    if self.is_captured(target) {
+                    if self.is_mutably_captured(target) {
                         self.builder.add_code(code! {
                             LOAD_CAPTURE new_reg, reg, 0;
                         });
@@ -513,7 +512,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                     }
                 }
                 RegisterChoice::Any if target.typ != AssignmentType::Discard => {
-                    debug_assert!(self.is_captured(target));
+                    debug_assert!(self.is_mutably_captured(target));
                     if self.context == AssignmentContext::AssignElse {
                         debug_assert!(target.typ != AssignmentType::Declaration);
                     }
@@ -551,7 +550,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                     }
                     RegisterChoice::Any => unreachable!(),
                 }
-            } else if self.is_captured(target)
+            } else if self.is_mutably_captured(target)
                 && self.copied_registers.get(Rc::clone(target)).is_none()
                 && self.selected_registers.get(Rc::clone(target)).is_none()
             {
@@ -598,7 +597,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
             let Some(&reg) = self.selected_registers.get(Rc::clone(target)) else {
                 continue;
             };
-            if self.is_captured(target) {
+            if self.is_mutably_captured(target) {
                 match target.typ {
                     AssignmentType::Assignment => {}
                     AssignmentType::Declaration => {
@@ -607,7 +606,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
                         });
                         self.builder.environment_mut().add_local(
                             target.name.clone(),
-                            LocalDefinition::CapturedVariable { index: reg },
+                            LocalDefinition::MutablyCapturedVariable { index: reg },
                             &target.location,
                         )?;
                     }
@@ -623,7 +622,7 @@ impl<'compiler, 'builder> AssignmentCompiler<'compiler, 'builder> {
         }
         for target in &self.assignment.targets {
             if let Some(copy) = self.copied_registers.get(Rc::clone(target)) {
-                if self.is_captured(target) {
+                if self.is_mutably_captured(target) {
                     self.builder.add_code(code! {
                         STORE_CAPTURE copy.original, copy.copy, 0;
                     });
