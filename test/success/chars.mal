@@ -1,0 +1,11 @@
+Main -> {
+    out [String::Chars "ABCabc"]...
+    out [String::Chars "*α⁜𝄞\x00"]...
+    s := String::FromChars
+    out [s]
+    s 48 49 50
+    out [s]
+    s 0x1f414
+    out [s]
+    out [s]
+}

@@ -77,7 +77,6 @@ Hopefully, they will all be added soon:
 - try-finally.
 - `Data::Count`.
 - `MinHeap` and `MaxHeap`.
-- `String::FromCharCodes`, `String::CharCodes`.
 
 Output
 ------

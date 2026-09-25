@@ -1,5 +1,7 @@
 pub mod bytes;
+pub mod chars;
 pub mod from_bytes;
+pub mod from_chars;
 pub mod from_lines;
 pub mod from_words;
 pub mod length;

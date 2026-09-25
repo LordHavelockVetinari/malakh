@@ -424,10 +424,13 @@ macro_rules! new_error {
             error
         }
     };
-    ($vm:ident, $($fmt:tt)*) => {
+    ($vm:ident, $(tag = $tag:ident,)* $s:literal $(, $($fmt:tt)*)?) => {
         {
             let mut error = $crate::vm::error::ErrorRef::new_from_builtin_family($vm, Self::NAME);
-            error.extend($crate::vm::Value::alloc_from(std::format!($($fmt)*), $vm.gc_mut()));
+            $(
+                error.extend(Value::from($crate::vm::symbol::Symbol::$tag));
+            )*
+            error.extend($crate::vm::Value::alloc_from(std::format!($s $(, $($fmt)*)?), $vm.gc_mut()));
             error
         }
     };

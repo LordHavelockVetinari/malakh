@@ -336,6 +336,17 @@ impl Value {
         })
     }
 
+    pub fn int_to_u32(self) -> Option<u32> {
+        const ALWAYS_SMALL: bool = (Value::MAX_SMALL_INT as u128) >= u32::MAX as u128;
+        if ALWAYS_SMALL {
+            return self.as_small_int().and_then(|n| u32::try_from(n).ok());
+        }
+        self.as_int().and_then(|either| match either {
+            Left(small) => u32::try_from(small).ok(),
+            Right(big) => u32::try_from(big).ok(),
+        })
+    }
+
     pub fn int_to_u64(&self) -> Option<u64> {
         self.as_int().and_then(|either| match either {
             Left(small) => u64::try_from(small).ok(),
@@ -757,6 +768,12 @@ impl From<bool> for Value {
     }
 }
 
+impl From<u8> for Value {
+    fn from(n: u8) -> Self {
+        Self::from_small_int(n as isize).unwrap()
+    }
+}
+
 impl From<StringRef> for Value {
     fn from(s: StringRef) -> Self {
         Self(s.0.map_addr(|addr| addr | Self::STRING_TAG).cast::<u8>())
@@ -773,6 +790,7 @@ impl From<CaptureRef> for Value {
         )
     }
 }
+
 pub trait AllocIntoValue {
     fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value;
 }
@@ -793,6 +811,16 @@ impl AllocIntoValue for usize {
             && let Some(result) = Value::from_small_int(n)
         {
             result
+        } else {
+            Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
+        }
+    }
+}
+
+impl AllocIntoValue for u32 {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        if let Ok(n) = isize::try_from(self) {
+            Value::alloc_from(n, gc)
         } else {
             Value::from(BigIntRef::new_unchecked(Integer::from(self), gc))
         }

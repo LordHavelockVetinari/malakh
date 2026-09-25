@@ -224,6 +224,8 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsFunction<string::length::Length>>("String")
         .add_type::<AsFunction<string::bytes::Bytes>>("String")
         .add_type::<AsFunction<string::from_bytes::FromBytes>>("String")
+        .add_type::<AsFunction<string::chars::Chars>>("String")
+        .add_type::<AsFunction<string::from_chars::FromChars>>("String")
         .add_type::<AsFunction<string::words::Words>>("String")
         .add_type::<AsBasicAggregator<string::from_words::FromWords>>("String")
         .add_type::<AsFunction<string::lines::Lines>>("String")

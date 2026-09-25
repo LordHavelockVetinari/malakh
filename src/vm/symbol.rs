@@ -98,4 +98,5 @@ builtin_symbols!(
     URN = .Urn,
     SEED = .Seed,
     SET_SEED = .SetSeed,
+    ENCODING_ERROR = .EncodingError,
 );
