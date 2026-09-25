@@ -11,8 +11,8 @@ mod register_allocator;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use assert_matches::assert_matches;
 use either::Either::{Left, Right};
+use std::assert_matches;
 
 use crate::builtin;
 use crate::compile::assignment::{AssignmentCompilationResult, AssignmentContext};
@@ -213,8 +213,8 @@ impl Compiler {
                 let output_reg =
                     register_choice.or_alloc(builder.register_allocator_mut(), location)?;
                 builder.add_code(code! {
-                    INIT 0, global_index;
-                    LOAD output_reg.index, global_index;
+                    LOAD1 output_reg.index, global_index;
+                    LOAD2 output_reg.index, global_index;
                 });
                 Ok(output_reg)
             }
@@ -1012,7 +1012,7 @@ impl Compiler {
     ) -> Result<(), CompilationError> {
         let family_index = self.processes.lazy_initializer_map[&lazy_init];
         let global_index = self.processes.global_var_map[&lazy_init];
-        if self.output.global_variable(Some(family_index)).is_none() {
+        if self.output.global_variable(family_index).is_none() {
             return CompilationError::err(
                 "too many globals and constructors (limit is 4294967295)",
                 &lazy_init.location,
@@ -1080,8 +1080,8 @@ impl Compiler {
                 }),
                 Some(&GlobalDefinition::Variable { global_index, .. }) => {
                     builder.add_code(code! {
-                        INIT 0, global_index;
-                        LOAD 1, global_index;
+                        LOAD1 1, global_index;
+                        LOAD2 1, global_index;
                     });
                 }
                 Some(

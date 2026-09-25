@@ -96,7 +96,7 @@ impl Vm {
             self.gc.mark(c);
         }
         for v in &self.global_variables {
-            if let Some(&value) = v.value().get() {
+            if let Some(value) = v.get() {
                 self.gc.mark(value);
             }
         }
@@ -188,7 +188,7 @@ impl Vm {
             self.instruction_pointer,
             self.call_stack
                 .last()
-                .map(|&p| format!("{:?}", Value::from_user_process_ref(p)))
+                .map(|&p| format!("{:?}", p))
                 .unwrap_or_else(|| "<not a process>".to_string()),
             instruction
         );

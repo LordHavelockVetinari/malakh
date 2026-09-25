@@ -13,7 +13,7 @@ use crate::vm::{Value, Vm};
 pub struct VmBuilderInner {
     constants: Vec<Value>,
     process_families: Vec<&'static UserProcessFamily>,
-    global_variable_families: Vec<Option<u32>>,
+    global_variable_families: Vec<u32>,
     // The initial process family is the first process that runs.
     // It can't capture anything, and can't stop or pause.
     initial_process_family: Option<u32>,
@@ -72,7 +72,7 @@ impl VmBuilder {
     }
 
     #[must_use]
-    pub fn global_variable(&mut self, family: Option<u32>) -> Option<u32> {
+    pub fn global_variable(&mut self, family: u32) -> Option<u32> {
         let index = u32::try_from(self.0.global_variable_families.len()).ok()?;
         self.0.global_variable_families.push(family);
         Some(index)
@@ -87,7 +87,7 @@ impl VmBuilder {
             .global_variable_families
             .into_iter()
             .map(|family| {
-                let family = family.map(|f| self.0.process_families[f as usize]);
+                let family = self.0.process_families[family as usize];
                 &*Box::leak(Box::new(GlobalVariable::new(family)))
             })
             .collect();

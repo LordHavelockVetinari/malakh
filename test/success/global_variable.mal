@@ -1,0 +1,26 @@
+Baz := 100
+Foo := Bar + 1
+Bar := Baz + 10
+
+Self := Self
+
+Thrower := [{
+    throw .Symbol
+}]
+
+X := Y + 1
+Y := [{
+    try {
+        out X
+    default:
+        out 0
+    }
+}]
+
+Main -> {
+    out Foo Foo Bar Bar Baz Baz
+    AssertErr { Self }
+    AssertErr .Symbol { _ := Thrower }
+    AssertErr { _ := Thrower }
+    out X Y
+}

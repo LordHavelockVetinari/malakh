@@ -7,6 +7,7 @@ use either::Either::{Left, Right};
 use crate::vm::builtin_process::BuiltinProcessRef;
 use crate::vm::capture::CaptureRef;
 use crate::vm::error::{ErrorRef, PowerError};
+use crate::vm::global_variable::GlobalVariableState;
 use crate::vm::process::{ProcessRef, ProcessState};
 use crate::vm::user_process::UserProcessRef;
 use crate::vm::{Value, throw_from_current_process};
@@ -70,8 +71,8 @@ opcodes! {
     JUMP (2) = 25;
     JUMP_IF (2) = 26;
     JUMP_UNLESS (2) = 27;
-    INIT (2) = 30;
-    LOAD (2) = 31;
+    LOAD1 (2) = 30;
+    LOAD2 (2) = 31;
     STORE (2) = 32;
     CONST (2) = 36;
     NEW (2) = 37;
@@ -403,21 +404,46 @@ fn run_jump_if(vm: &mut Vm, inst: Instruction) {
     }
 }
 
-fn run_init(vm: &mut Vm, inst: Instruction) {
-    debug_assert_eq!(inst.opcode(), INIT);
-    let (_, idx) = inst.as_two_operand();
-    let var = &vm.global_variables[idx as usize];
-    var.begin_init(vm);
-}
-
-fn run_load(vm: &mut Vm, inst: Instruction) {
-    debug_assert_eq!(inst.opcode(), LOAD);
+fn run_load1(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), LOAD1);
     let (dst, idx) = inst.as_two_operand();
     let var = &vm.global_variables[idx as usize];
-    let Some(&result) = var.value().get() else {
-        throw_from_current_process!(vm, "recursively-defined global variable");
+    use GlobalVariableState::*;
+    match var.state() {
+        Initialized(value) => {
+            *vm.register_mut(dst) = value;
+            vm.jump(1);
+        }
+        Uninitialized => {
+            let initializer = var.make_initializer(vm);
+            *vm.register_mut(dst) = Value::from(initializer);
+            vm.enter_user_process(initializer);
+        }
+        Initializing => throw_from_current_process!(
+            vm,
+            "attempt to access global variable during its own initialization"
+        ),
+        Poisoned => throw_from_current_process!(
+            vm,
+            "cannot initialize global variable (a previous attempt failed)"
+        ),
+    }
+}
+
+fn run_load2(vm: &mut Vm, inst: Instruction) {
+    debug_assert_eq!(inst.opcode(), LOAD2);
+    let (dst, idx) = inst.as_two_operand();
+    let initializer = vm
+        .register(dst)
+        .as_user_process_ref()
+        .expect("initializer should be a user process");
+    let var = &vm.global_variables[idx as usize];
+    if initializer.state() == ProcessState::Err {
+        var.poison();
+        vm.propagate_error(initializer);
         return;
-    };
+    }
+    let result = var.get().expect("variable should be initialized");
     *vm.register_mut(dst) = result;
 }
 
@@ -425,10 +451,7 @@ fn run_store(vm: &mut Vm, inst: Instruction) {
     debug_assert_eq!(inst.opcode(), STORE);
     let (src, idx) = inst.as_two_operand();
     let src = vm.register(src);
-    let var = &vm.global_variables[idx as usize];
-    if var.value().set(src).is_err() {
-        panic!("global variable initialized twice");
-    }
+    vm.global_variables[idx as usize].finish_init(src);
 }
 
 fn run_const(vm: &mut Vm, inst: Instruction) {
@@ -897,8 +920,8 @@ static OPCODE_TABLE: [InstructionFn; 256] = {
     table[JUMP as usize] = run_jump;
     table[JUMP_IF as usize] = run_jump_if;
     table[JUMP_UNLESS as usize] = run_jump_unless;
-    table[INIT as usize] = run_init;
-    table[LOAD as usize] = run_load;
+    table[LOAD1 as usize] = run_load1;
+    table[LOAD2 as usize] = run_load2;
     table[STORE as usize] = run_store;
     table[CONST as usize] = run_const;
     table[CAPTURE as usize] = run_capture;

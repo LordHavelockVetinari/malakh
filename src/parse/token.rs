@@ -634,7 +634,7 @@ impl Iterator for Scanner {
 #[cfg(test)]
 mod test {
     use super::*;
-    use assert_matches::assert_matches;
+    use std::assert_matches;
     use std::io::Cursor;
 
     #[test]
