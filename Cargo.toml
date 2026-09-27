@@ -10,6 +10,7 @@ either = "1.15.0"
 fastrand = "2.3.0"
 hashbrown = "0.16.1"
 malachite = { version = "0.6.1", features = ["malachite-nz", "naturals_and_integers"], default-features = false }
+memchr = "2.8.3"
 ryu = "1.0.20"
 thiserror = "2.0.12"
 

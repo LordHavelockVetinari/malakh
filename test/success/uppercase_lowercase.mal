@@ -1,0 +1,6 @@
+Main -> {
+    out [String::Uppercase "Hello, World!"]
+    out [String::Lowercase "Hello, World!"]
+    out [String::Uppercase "Γειά σου Κόσμε!"]
+    out [String::Lowercase "Γειά σου Κόσμε!"]
+}

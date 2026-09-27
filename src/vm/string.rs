@@ -188,3 +188,9 @@ impl Debug for StringRef {
         write!(f, "{}", String::from_utf8_lossy(self.bytes()))
     }
 }
+
+impl From<StringRef> for NonNull<[u8]> {
+    fn from(value: StringRef) -> Self {
+        Self::from(value.bytes())
+    }
+}

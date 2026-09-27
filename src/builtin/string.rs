@@ -1,10 +1,15 @@
 pub mod bytes;
 pub mod chars;
+pub mod contains;
+pub mod find;
+pub mod find_from_end;
 pub mod from_bytes;
 pub mod from_chars;
 pub mod from_lines;
 pub mod from_words;
 pub mod length;
 pub mod lines;
+pub mod lowercase;
 pub mod slice;
+pub mod uppercase;
 pub mod words;
