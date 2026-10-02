@@ -17,27 +17,62 @@ Main -> {
     ]...
     AssertErr { String::Find "a" "a" "" }
 
-    out "FindFromEnd"
-    out "A" [String::FindFromEnd "haystack" "needle"]...
-    out "B" [String::FindFromEnd "butterfly" "fly"]...
-    out "C" [String::FindFromEnd "banana" "ana"]...
-    out "D" [String::FindFromEnd "banananana" "ana"]...
-    out "E" [String::FindFromEnd
+    out "FindBackward"
+    out "A" [String::FindBackward "haystack" "needle"]...
+    out "B" [String::FindBackward "butterfly" "fly"]...
+    out "C" [String::FindBackward "banana" "ana"]...
+    out "D" [String::FindBackward "banananana" "ana"]...
+    out "E" [String::FindBackward
         "All you need is love, love, love is all you need."
         "love"
     ]...
-    out "F" [String::FindFromEnd "" ""]...
-    out "G" [String::FindFromEnd "abc" ""]...
-    out "H" [String::FindFromEnd "" "a"]...
-    out "I" [String::FindFromEnd
+    out "F" [String::FindBackward "" ""]...
+    out "G" [String::FindBackward "abc" ""]...
+    out "H" [String::FindBackward "" "a"]...
+    out "I" [String::FindBackward
         "\x11\x22\x00\xff\xff\xaa\xbb\xcc\x00\xff\x00"
         "\x00\xff"
     ]...
-    AssertErr { String::FindFromEnd "a" "a" "" }
+    AssertErr { String::FindBackward "a" "a" "" }
+
     out "Contains"
     out [String::Contains "haystack" "needle"]
     out [String::Contains "haystack" "hay"]
     out [String::Contains "haystack" "stack"]
     out [String::Contains "\x11\x22\x33\xff\x00\x44\x55\x66" "\xff\x00"]
     out [String::Contains "\x11\x22\x33\xff\x00\x44\x55\x66" "\xff\xff"]
+
+    out "StartsWith"
+    out [String::StartsWith "butterfly" "fly"]
+    out [String::StartsWith "butterfly" "butter"]
+    out [String::StartsWith "\xff\xff" ""]
+    out [String::StartsWith "" "\xff"]
+
+    out "EndsWith"
+    out [String::EndsWith "butterfly" "fly"]
+    out [String::EndsWith "butterfly" "butter"]
+    out [String::EndsWith "\xff\xff" ""]
+    out [String::EndsWith "" "\xff"]
+
+    out "Replace"
+    out [String::Replace "lorem ipsum dolor sit amet" "i" "ii"]
+    out [String::Replace "lorem ipsum dolor sit amet" "lo" "$"]
+    out [String::Replace "lorem ipsum dolor sit amet" "what" "that"]
+    out [String::Replace "\xf0\x8f\x81\xbd" "\x8f\x81" "\x9f\x91"]
+    out [String::Replace "abcd" "" "xx"]
+
+    out "ReplaceFirst"
+    out [String::ReplaceFirst "foo bar baz quux" "ba" "quu"]
+    out [String::ReplaceFirst "foo bar baz quux" "" "x"]
+
+    out "ReplaceLast"
+    out [String::ReplaceLast "foo bar baz quux" "ba" "quu"]
+    out [String::ReplaceLast "foo bar baz quux" "" "x"]
+
+    out [String::Repeat "foo" 0]
+    out [String::Repeat "foo" 1]
+    out [String::Repeat "" (2^64)]
+    out [String::Repeat "foo" 10]
+    AssertErr { [String::Repeat "foo" (-1)] }
+    AssertErr { [String::Repeat "x" (2 ^ 64)] }
 }

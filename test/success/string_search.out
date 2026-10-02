@@ -22,7 +22,7 @@ H
 I
 2
 8
-FindFromEnd
+FindBackward
 A
 B
 6
@@ -52,3 +52,29 @@ True
 True
 True
 False
+StartsWith
+False
+True
+True
+False
+EndsWith
+True
+False
+True
+False
+Replace
+lorem iipsum dolor siit amet
+$rem ipsum do$r sit amet
+lorem ipsum dolor sit amet
+👽
+xxaxxbxxcxxdxx
+ReplaceFirst
+foo quur baz quux
+xfoo bar baz quux
+ReplaceLast
+foo bar quuz quux
+foo bar baz quuxx
+
+foo
+
+foofoofoofoofoofoofoofoofoofoo

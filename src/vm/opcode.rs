@@ -73,7 +73,6 @@ opcodes! {
     JUMP_UNLESS (2) = 27;
     LOAD1 (2) = 30;
     LOAD2 (2) = 31;
-    STORE (2) = 32;
     CONST (2) = 36;
     NEW (2) = 37;
     NEW_BUILTIN (2) = 38;
@@ -438,20 +437,18 @@ fn run_load2(vm: &mut Vm, inst: Instruction) {
         .as_user_process_ref()
         .expect("initializer should be a user process");
     let var = &vm.global_variables[idx as usize];
-    if initializer.state() == ProcessState::Err {
-        var.poison();
-        vm.propagate_error(initializer);
-        return;
+    match initializer.state() {
+        ProcessState::Out => {
+            let result = initializer.output_slot();
+            var.finish_init(result);
+            *vm.register_mut(dst) = result;
+        }
+        ProcessState::Err => {
+            var.poison();
+            vm.propagate_error(initializer);
+        }
+        _ => panic!("initializer state should be `Out` or `Err`"),
     }
-    let result = var.get().expect("variable should be initialized");
-    *vm.register_mut(dst) = result;
-}
-
-fn run_store(vm: &mut Vm, inst: Instruction) {
-    debug_assert_eq!(inst.opcode(), STORE);
-    let (src, idx) = inst.as_two_operand();
-    let src = vm.register(src);
-    vm.global_variables[idx as usize].finish_init(src);
 }
 
 fn run_const(vm: &mut Vm, inst: Instruction) {
@@ -922,7 +919,6 @@ static OPCODE_TABLE: [InstructionFn; 256] = {
     table[JUMP_UNLESS as usize] = run_jump_unless;
     table[LOAD1 as usize] = run_load1;
     table[LOAD2 as usize] = run_load2;
-    table[STORE as usize] = run_store;
     table[CONST as usize] = run_const;
     table[CAPTURE as usize] = run_capture;
     table[LOAD_CAPTURE as usize] = run_load_capture;

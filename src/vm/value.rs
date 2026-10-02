@@ -871,6 +871,12 @@ impl AllocIntoValue for &'_ [u8] {
     }
 }
 
+impl AllocIntoValue for Vec<u8> {
+    fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
+        Value::alloc_from(&self[..], gc)
+    }
+}
+
 impl AllocIntoValue for &'_ str {
     fn alloc_into_value(self, gc: &mut GarbageCollector) -> Value {
         Value::alloc_from(self.as_bytes(), gc)

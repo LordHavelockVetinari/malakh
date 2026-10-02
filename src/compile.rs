@@ -1011,7 +1011,6 @@ impl Compiler {
         builder: &mut ProcessFamilyBuilder,
     ) -> Result<(), CompilationError> {
         let family_index = self.processes.lazy_initializer_map[&lazy_init];
-        let global_index = self.processes.global_var_map[&lazy_init];
         if self.output.global_variable(family_index).is_none() {
             return CompilationError::err(
                 "too many globals and constructors (limit is 4294967295)",
@@ -1022,8 +1021,8 @@ impl Compiler {
         let out_reg = self.compile_expr(value, RegisterChoice::Any, builder)?;
         out_reg.dealloc(builder.register_allocator_mut());
         builder.add_code(code! {
-            STORE out_reg.index, global_index;
-            STOP 0, 0, 0;
+            OUT out_reg.index, 0, 0;
+            UNREACHABLE 0, 0, 0;
         });
         builder.set_non_capturing()?;
         Ok(())

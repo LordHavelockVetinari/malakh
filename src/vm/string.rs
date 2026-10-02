@@ -1,9 +1,10 @@
 pub mod writer;
 
 use std::alloc::{self, Layout};
+use std::fmt;
 use std::fmt::Debug;
+use std::hint::assert_unchecked;
 use std::ptr::NonNull;
-use std::{fmt, slice};
 
 use crate::vm::Value;
 use crate::vm::gc::{GarbageCollector, GcInfo};
@@ -11,44 +12,53 @@ use crate::vm::gc::{GarbageCollector, GcInfo};
 #[repr(C, align(8))]
 pub struct StringHeader {
     gc_info: GcInfo,
-    is_borrowed: bool,
-}
-
-#[repr(C, align(8))]
-pub struct BorrowedStringHeader {
-    gc_info: GcInfo,
-    is_borrowed: bool,
-    owner: StringRef,
     bytes: NonNull<[u8]>,
-}
-
-#[repr(C, align(8))]
-pub struct OwnedStringHeader {
-    gc_info: GcInfo,
-    is_borrowed: bool,
-    len: usize,
+    _marker: [StringRef; 0],
 }
 
 #[derive(Clone, Copy)]
 pub struct StringRef(pub NonNull<StringHeader>);
 
-impl OwnedStringHeader {
-    fn content_ptr(this: NonNull<Self>) -> NonNull<u8> {
-        unsafe { this.add(1) }.cast::<u8>()
-    }
-}
-
 impl StringRef {
     fn owned_layout(len: usize) -> Layout {
-        let (layout, offset) = Layout::new::<OwnedStringHeader>()
+        let (layout, offset) = Layout::new::<StringHeader>()
             .extend(Layout::array::<u8>(len).unwrap())
             .unwrap();
-        debug_assert_eq!(offset, size_of::<OwnedStringHeader>());
+        debug_assert_eq!(offset, size_of::<StringHeader>());
         layout
     }
 
-    fn borrowed_layout() -> Layout {
-        Layout::new::<BorrowedStringHeader>()
+    const BORROWED_LAYOUT: Layout = {
+        let Ok((layout, offset)) = Layout::new::<StringHeader>().extend(Layout::new::<StringRef>())
+        else {
+            panic!("invalid layout");
+        };
+        assert!(offset == size_of::<StringHeader>());
+        layout
+    };
+
+    fn header(&self) -> &StringHeader {
+        unsafe { self.0.as_ref() }
+    }
+
+    pub fn bytes_non_null(self) -> NonNull<[u8]> {
+        self.header().bytes
+    }
+
+    fn bytes_start(self) -> NonNull<u8> {
+        self.bytes_non_null().cast::<u8>()
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        unsafe { self.bytes_non_null().as_ref() }
+    }
+
+    fn payload_ptr(self) -> NonNull<u8> {
+        unsafe { self.0.add(1).cast::<u8>() }
+    }
+
+    fn is_owned(self) -> bool {
+        self.bytes_start() == self.payload_ptr()
     }
 
     // Allocate memory for an owned string.
@@ -59,12 +69,11 @@ impl StringRef {
                 .unwrap()
                 .cast::<StringHeader>(),
         );
-        let header = this.0.cast::<OwnedStringHeader>();
         unsafe {
-            header.write(OwnedStringHeader {
+            this.0.write(StringHeader {
                 gc_info: GcInfo::default(),
-                is_borrowed: false,
-                len,
+                bytes: NonNull::slice_from_raw_parts(this.payload_ptr(), len),
+                _marker: [],
             });
         }
         gc.start_tracking(Value::from(this), layout.size());
@@ -73,22 +82,19 @@ impl StringRef {
 
     pub fn new(bytes: &[u8], gc: &mut GarbageCollector) -> Self {
         let this = unsafe { Self::allocate(bytes.len(), gc) };
-        debug_assert!(!this.header().is_borrowed);
-        let header = this.0.cast::<OwnedStringHeader>();
-        let content = OwnedStringHeader::content_ptr(header);
         unsafe {
-            content.copy_from_nonoverlapping(NonNull::from(bytes).cast::<u8>(), bytes.len());
+            assert_unchecked(this.is_owned());
+            this.bytes_start()
+                .copy_from_nonoverlapping(NonNull::from(bytes).cast::<u8>(), bytes.len());
         }
         this
     }
 
     pub fn new_zeroed(len: usize, gc: &mut GarbageCollector) -> Self {
         let this = unsafe { Self::allocate(len, gc) };
-        debug_assert!(!this.header().is_borrowed);
-        let header = this.0.cast::<OwnedStringHeader>();
-        let content = OwnedStringHeader::content_ptr(header);
         unsafe {
-            content.write_bytes(0, len);
+            assert_unchecked(this.is_owned());
+            this.bytes_start().write_bytes(0, len);
         }
         this
     }
@@ -98,61 +104,41 @@ impl StringRef {
         bytes: NonNull<[u8]>,
         gc: &mut GarbageCollector,
     ) -> Self {
-        let layout = Self::borrowed_layout();
         let this = Self(
-            NonNull::new(unsafe { alloc::alloc(layout) })
+            NonNull::new(unsafe { alloc::alloc(Self::BORROWED_LAYOUT) })
                 .unwrap()
                 .cast::<StringHeader>(),
         );
-        let header = this.0.cast::<BorrowedStringHeader>();
         unsafe {
-            header.write(BorrowedStringHeader {
+            this.0.write(StringHeader {
                 gc_info: GcInfo::default(),
-                is_borrowed: true,
-                owner,
                 bytes,
+                _marker: [],
             });
+            this.payload_ptr().cast::<StringRef>().write(owner);
         }
-        gc.start_tracking(Value::from(this), layout.size());
+        gc.start_tracking(Value::from(this), Self::BORROWED_LAYOUT.size());
         this
     }
 
-    fn header(&self) -> &StringHeader {
-        unsafe { self.0.as_ref() }
-    }
-
-    pub fn bytes(&self) -> &[u8] {
-        if self.header().is_borrowed {
-            unsafe {
-                let header = self.0.cast::<BorrowedStringHeader>().as_ref();
-                header.bytes.as_ref()
-            }
+    pub fn layout(self) -> Layout {
+        if self.is_owned() {
+            Self::owned_layout(self.bytes_non_null().len())
         } else {
-            let header = self.0.cast::<OwnedStringHeader>();
-            let content = OwnedStringHeader::content_ptr(header);
-            unsafe { slice::from_raw_parts(content.as_ptr(), header.as_ref().len) }
+            Self::BORROWED_LAYOUT
         }
     }
 
-    fn layout(&self) -> Layout {
-        if self.header().is_borrowed {
-            Self::borrowed_layout()
-        } else {
-            let header = unsafe { self.0.cast::<OwnedStringHeader>().as_ref() };
-            Self::owned_layout(header.len)
-        }
-    }
-
-    pub fn gc_mark(&self) {
+    pub fn gc_mark(self) {
         let header = self.header();
-        if header.gc_info.mark() || !header.is_borrowed {
+        if header.gc_info.mark() || self.is_owned() {
             return;
         }
-        let header = unsafe { self.0.cast::<BorrowedStringHeader>().as_ref() };
-        header.owner.gc_mark();
+        let owner = *unsafe { self.payload_ptr().cast::<StringRef>().as_ref() };
+        owner.gc_mark();
     }
 
-    pub fn gc_sweep(&mut self) -> bool {
+    pub fn gc_sweep(self) -> bool {
         if self.header().gc_info.unmark() {
             return true;
         }
@@ -162,18 +148,18 @@ impl StringRef {
         false
     }
 
-    fn owner(&self) -> Self {
-        if self.header().is_borrowed {
-            unsafe { self.0.cast::<BorrowedStringHeader>().as_ref().owner }
+    fn owner(self) -> Self {
+        if self.is_owned() {
+            self
         } else {
-            *self
+            *unsafe { self.payload_ptr().cast::<StringRef>().as_ref() }
         }
     }
 
     // Bytes must be a slice of self.bytes().
-    pub unsafe fn slice_raw(&self, bytes: NonNull<[u8]>, gc: &mut GarbageCollector) -> StringRef {
+    pub unsafe fn slice_raw(self, bytes: NonNull<[u8]>, gc: &mut GarbageCollector) -> StringRef {
         let owner = self.owner();
-        debug_assert!(!owner.header().is_borrowed);
+        debug_assert!(owner.is_owned());
         unsafe { Self::new_borrowed(owner, bytes, gc) }
     }
 
@@ -186,11 +172,5 @@ impl StringRef {
 impl Debug for StringRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", String::from_utf8_lossy(self.bytes()))
-    }
-}
-
-impl From<StringRef> for NonNull<[u8]> {
-    fn from(value: StringRef) -> Self {
-        Self::from(value.bytes())
     }
 }

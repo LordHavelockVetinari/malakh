@@ -7,15 +7,15 @@ use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
 
-pub struct FindFromEnd {
+pub struct FindBackward {
     haystack_ref: Option<StringRef>,
     needle_ref: Option<StringRef>,
     haystack: NonNull<[u8]>,
     needle: NonNull<[u8]>,
 }
 
-impl Function for FindFromEnd {
-    const NAME: &str = "FindFromEnd";
+impl Function for FindBackward {
+    const NAME: &str = "FindBackward";
 
     fn new(_vm: &mut Vm) -> (Self, Action) {
         let this = Self {
@@ -42,7 +42,7 @@ impl Function for FindFromEnd {
                 err!(vm, "type error: {} {}", Self::NAME, input.type_name());
             };
             self.haystack_ref = Some(haystack);
-            self.haystack = NonNull::from(haystack);
+            self.haystack = haystack.bytes_non_null();
             Action::Input
         } else if self.needle_ref.is_none() {
             let Some(needle) = input.as_string_ref() else {
@@ -54,7 +54,7 @@ impl Function for FindFromEnd {
                 );
             };
             self.needle_ref = Some(needle);
-            self.needle = NonNull::from(needle);
+            self.needle = needle.bytes_non_null();
             Action::OptionalInput
         } else {
             err!(vm, "{} was not expecting input", Self::NAME);

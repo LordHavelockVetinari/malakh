@@ -44,7 +44,7 @@ impl Function for Find {
                 err!(vm, "type error: {} {}", Self::NAME, input.type_name());
             };
             self.haystack_ref = Some(haystack);
-            self.haystack = NonNull::from(haystack);
+            self.haystack = haystack.bytes_non_null();
             Action::Input
         } else if self.needle_ref.is_none() {
             let Some(needle) = input.as_string_ref() else {
@@ -56,7 +56,7 @@ impl Function for Find {
                 );
             };
             self.needle_ref = Some(needle);
-            self.needle = NonNull::from(needle);
+            self.needle = needle.bytes_non_null();
             Action::OptionalInput
         } else {
             err!(vm, "{} was not expecting input", Self::NAME);
