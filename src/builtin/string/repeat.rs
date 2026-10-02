@@ -1,6 +1,6 @@
 use either::Either::{Left, Right};
 
-use crate::builtin::helper::{Action, Function, err};
+use crate::builtin::helper::{Action, Function, err, input_before_input};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
@@ -24,13 +24,8 @@ impl Function for Repeat {
     }
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
-        let Some(string) = self.string else {
-            if let Some(string) = input.as_string_ref() {
-                self.string = Some(string);
-                return Action::Input;
-            } else {
-                err!(vm, "type error: {} {}", Self::NAME, input.type_name());
-            }
+        let Some(string) = input_before_input!(self.string = input.as_string_ref()) else {
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
         let n = match input.as_int() {
             Some(Left(n)) => {

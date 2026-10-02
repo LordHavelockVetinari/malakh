@@ -1,4 +1,4 @@
-use crate::builtin::helper::{Action, Function, err};
+use crate::builtin::helper::{Action, Function, err, input_before_input, last_input};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
@@ -22,25 +22,18 @@ impl Function for StartsWith {
     }
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
-        let Some(s) = input.as_string_ref() else {
-            if self.string.is_none() {
-                err!(vm, "type error: {} {}", Self::NAME, input.type_name());
-            } else {
-                err!(
-                    vm,
-                    "type error: {} String {}",
-                    Self::NAME,
-                    input.type_name()
-                );
-            }
+        let Some(string) = input_before_input!(self.string = input.as_string_ref()) else {
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
-        if let Some(string) = self.string {
-            let string = string.bytes();
-            let prefix = s.bytes();
-            Action::Output(Value::from(string.starts_with(prefix)))
-        } else {
-            self.string = Some(s);
-            Action::Input
-        }
+        let Some(prefix) = last_input!(input.as_string_ref()) else {
+            err!(
+                vm,
+                "type error: {} String {}",
+                Self::NAME,
+                input.type_name()
+            );
+        };
+        let result = string.bytes().starts_with(prefix.bytes());
+        Action::Output(Value::from(result))
     }
 }

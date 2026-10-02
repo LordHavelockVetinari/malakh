@@ -1,6 +1,6 @@
 use memchr::memmem;
 
-use crate::builtin::helper::{Action, Function, err};
+use crate::builtin::helper::{Action, Function, err, input_before_input, last_input};
 use crate::vm::gc::GarbageCollector;
 use crate::vm::string::StringRef;
 use crate::vm::{Value, Vm};
@@ -43,42 +43,26 @@ impl Function for Replace {
     }
 
     fn input(&mut self, input: Value, vm: &mut Vm) -> Action {
-        let Some(s) = input.as_string_ref() else {
-            if self.haystack.is_none() {
-                err!(vm, "type error: {} {}", Self::NAME, input.type_name());
-            } else if self.needle.is_none() {
-                err!(
-                    vm,
-                    "type error: {} String {}",
-                    Self::NAME,
-                    input.type_name()
-                );
-            } else {
-                err!(
-                    vm,
-                    "type error: {} String String {}",
-                    Self::NAME,
-                    input.type_name()
-                );
-            }
+        let Some(haystack) = input_before_input!(self.haystack = input.as_string_ref()) else {
+            err!(vm, "type error: {} {}", Self::NAME, input.type_name());
         };
-        match (self.haystack, self.needle) {
-            (None, None) => {
-                self.haystack = Some(s);
-                Action::Input
-            }
-            (Some(_), None) => {
-                self.needle = Some(s);
-                Action::Input
-            }
-            (Some(haystack), Some(needle)) => {
-                let haystack = haystack.bytes();
-                let needle = needle.bytes();
-                let replacement = s.bytes();
-                let result = replace(haystack, needle, replacement);
-                Action::Output(Value::alloc_from(result, vm.gc_mut()))
-            }
-            (None, Some(_)) => unreachable!(),
-        }
+        let Some(needle) = input_before_input!(self.needle = input.as_string_ref()) else {
+            err!(
+                vm,
+                "type error: {} String {}",
+                Self::NAME,
+                input.type_name()
+            );
+        };
+        let Some(replacement) = last_input!(input.as_string_ref()) else {
+            err!(
+                vm,
+                "type error: {} String String {}",
+                Self::NAME,
+                input.type_name()
+            );
+        };
+        let result = replace(haystack.bytes(), needle.bytes(), replacement.bytes());
+        Action::Output(Value::alloc_from(result, vm.gc_mut()))
     }
 }

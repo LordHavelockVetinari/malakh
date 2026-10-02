@@ -452,4 +452,25 @@ macro_rules! err {
     };
 }
 
-pub(crate) use {_define_class_symbol, define_class, err, new_error};
+macro_rules! input_before_input {
+    ($self:ident . $field:ident = $maybe_input:expr) => {
+        if let ::std::option::Option::Some(result) = $self.$field {
+            Some(result)
+        } else if let ::std::option::Option::Some(new_value) = $maybe_input {
+            $self.$field = ::std::option::Option::Some(new_value);
+            return Action::Input;
+        } else {
+            None
+        }
+    };
+}
+
+macro_rules! last_input {
+    ($maybe_input:expr) => {
+        $maybe_input
+    };
+}
+
+pub(crate) use {
+    _define_class_symbol, define_class, err, input_before_input, last_input, new_error,
+};
