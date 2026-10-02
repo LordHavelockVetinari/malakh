@@ -1,3 +1,4 @@
+pub mod at;
 pub mod bytes;
 pub mod chars;
 pub mod contains;

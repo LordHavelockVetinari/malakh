@@ -221,6 +221,7 @@ static GLOBAL_BUILTIN_COLLECTOR: LazyLock<BuiltinCollector> = LazyLock::new(|| {
         .add_type::<AsFunction<math::ceil::Ceil>>("Math")
         .add_type::<AsFunction<math::mod_pow::ModPow>>("Math")
         .add_module_to_root("String")
+        .add_type::<AsFunction<string::at::At>>("String")
         .add_type::<AsFunction<string::length::Length>>("String")
         .add_type::<AsFunction<string::bytes::Bytes>>("String")
         .add_type::<AsFunction<string::from_bytes::FromBytes>>("String")

@@ -30,4 +30,14 @@ Main -> {
     AssertErr { String::Words 1 }
     AssertErr { String::Words "\xff" }
     AssertErr { String::Words "\x80" }
+
+    out [String::At "Hello, World!" 4]
+    out [String::At "α" 0]
+    out [String::At "α" 1]
+
+    Assert ([Process::State (String::At "α" 2)] == .Stop)
+    Assert ([Process::State (String::At "α" (2^64))] == .Stop)
+    Assert ([Process::State (String::At "α" (-1))] == .Stop)
+    Assert ([Process::State (String::At "α" (-(2^64)))] == .Stop)
+    AssertErr (String::At "x" 0.0)
 }
