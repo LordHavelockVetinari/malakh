@@ -1,5 +1,6 @@
 pub mod at;
 pub mod bytes;
+pub mod char_at;
 pub mod chars;
 pub mod contains;
 pub mod ends_with;

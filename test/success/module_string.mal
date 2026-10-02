@@ -40,4 +40,26 @@ Main -> {
     Assert ([Process::State (String::At "α" (-1))] == .Stop)
     Assert ([Process::State (String::At "α" (-(2^64)))] == .Stop)
     AssertErr (String::At "x" 0.0)
+
+    out [String::CharAt "αβγδ" 0]
+    out [String::CharAt "αβγδ" 2]
+    out [String::CharAt "αβγδ" 4]
+    out [String::CharAt "αβγδ" 6]
+    out [String::CharAt "x🫍🦑y" 0]
+    out [String::CharAt "x🫍🦑y" 1]
+    out [String::CharAt "x🫍🦑y" 5]
+    out [String::CharAt "x🫍🦑y" 9]
+
+    Assert ([Process::State (String::CharAt "αβγδ" 5)] == .Stop)
+    Assert ([Process::State (String::CharAt "αβγδ" 7)] == .Stop)
+    Assert ([Process::State (String::CharAt "αβγδ" 8)] == .Stop)
+    Assert ([Process::State (String::CharAt "αβγδ" (2^64))] == .Stop)
+    Assert ([Process::State (String::CharAt "αβγδ" (-1))] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 2)] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 3)] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 4)] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 6)] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 7)] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 8)] == .Stop)
+    Assert ([Process::State (String::CharAt "x🫍🦑y" 10)] == .Stop)
 }
