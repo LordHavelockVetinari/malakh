@@ -966,7 +966,7 @@ impl Parser {
             StmtType::Assignment(assignment) => Rc::clone(assignment),
             _ => {
                 return self.err(
-                    "the top level of the program may only contain declarations",
+                    "the program's top level may only contain declarations",
                     stmt.1.clone(),
                 );
             }
