@@ -1,0 +1,32 @@
+=== Trim ===
+*foo*
+**
+**
+*bar*
+*baz*
+*foo bar*
+*quux*
+*quux*
+*spam*
+*ham*
+*  bacon  *
+*-  eggs  -*
+*cad*
+=== TrimStart ===
+*foo *
+*bar*
+*baz *
+* spam!*
+*ham*
+*ligă*
+* ghanoush*
+*xyz*
+=== TrimEnd ===
+*   foo*
+* bar*
+*baz*
+*!spam *
+*ham*
+*bacon*
+*can*
+*a*

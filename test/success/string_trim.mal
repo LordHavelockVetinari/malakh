@@ -1,0 +1,59 @@
+import String:: Trim, TrimStart, TrimEnd
+
+starry -> {
+    s := in
+    User [Cat "*" s "*"]
+}
+
+allSpaces := [Cat
+    "\u0009\u000a\u000b\u000c\u000d\u0020\u0085\u00a0\u1680\u2000\u2001\u2002"
+    "\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f"
+    "\u3000"
+]
+
+allSpaces2 := [String::FromChars [Random .Urn [String::Chars allSpaces]...]...]
+
+Main -> {
+    out "=== Trim ==="
+    starry [Trim "   foo  "]
+    starry [Trim ""]
+    starry [Trim " \t "]
+    starry [Trim "  \r\rbar \n \t"]
+    starry [Trim [Cat [String::Repeat " " 100] "baz" [String::Repeat "\t" 101]]]
+    starry [Trim "foo bar"]
+    starry [Trim [Cat allSpaces allSpaces "quux" allSpaces allSpaces allSpaces]]
+    starry [Trim [Cat allSpaces2 allSpaces2 "quux" allSpaces2 allSpaces2 allSpaces2]]
+    AssertErr { [Trim "\xff"] }
+    starry [Trim ",,,spam,," ","]
+    starry [Trim "\xffham\xff\xff" "\xff"]
+    starry [Trim "----  bacon  ----" "--"]
+    starry [Trim "-----  eggs  -----" "--"]
+    starry [Trim "abracadabra" "abra"]
+    s := [Trim "xaxax" "xax"]
+    Assert (s == "xa" or s == "ax")
+    AssertErr { Trim "a" "b" "c" }
+
+    out "=== TrimStart ==="
+    starry [TrimStart "   foo "]
+    starry [TrimStart [Cat allSpaces "bar"]]
+    starry [TrimStart "baz "]
+    AssertErr { [TrimStart "\xff"] }
+    starry [TrimStart "!!! spam!" "!"]
+    starry [TrimEnd "ham" "spam"]
+    starry [TrimStart "mămăligă" "mă"]
+    starry [TrimStart "baba ghanoush" "ba"]
+    starry [TrimStart "\xff\xff\xff\xff\xffxyz" "\xff"]
+    AssertErr { TrimStart "a" "b" "c" }
+
+    out "=== TrimEnd ==="
+    starry [TrimEnd "   foo "]
+    starry [TrimEnd [Cat " bar" allSpaces]]
+    starry [TrimEnd "baz"]
+    AssertErr { [TrimEnd "\xff"] }
+    starry [TrimEnd "!spam !!!" "!"]
+    starry [TrimEnd "ham" "spam"]
+    starry [TrimEnd "bacon\xff\xff\xff\xff\xff\xff" "\xff\xff"]
+    starry [TrimEnd "cantata" "ta"]
+    starry [TrimEnd "alfalfa" "lfa"]
+    AssertErr { TrimEnd "a" "b" "c" }
+}

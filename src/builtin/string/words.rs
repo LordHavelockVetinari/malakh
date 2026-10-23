@@ -11,13 +11,13 @@ pub struct Words {
 }
 
 impl Words {
-    fn next(&mut self) -> Option<NonNull<[u8]>> {
+    fn next(&mut self) -> Option<&[u8]> {
         let s = unsafe { self.data.as_ref() };
         let result = s.split_whitespace().next()?.as_bytes();
         let endpoint = result.as_ptr_range().end;
         let skipped = unsafe { endpoint.offset_from_unsigned(s.as_ptr()) };
         self.data = NonNull::from(&s[skipped..]);
-        Some(NonNull::from(result))
+        Some(result)
     }
 }
 
@@ -49,7 +49,7 @@ impl Function for Words {
         self.data = NonNull::from(s);
         match self.next() {
             Some(result) => {
-                let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
+                let result = owner.slice_raw(result, vm.gc_mut());
                 Action::Output(Value::from(result))
             }
             None => Action::Stop,
@@ -60,7 +60,7 @@ impl Function for Words {
         let owner = self.owner.unwrap();
         match self.next() {
             Some(result) => {
-                let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
+                let result = owner.slice_raw(result, vm.gc_mut());
                 Action::Output(Value::from(result))
             }
             None => Action::Stop,

@@ -157,15 +157,16 @@ impl StringRef {
     }
 
     // Bytes must be a slice of self.bytes().
-    pub unsafe fn slice_raw(self, bytes: NonNull<[u8]>, gc: &mut GarbageCollector) -> StringRef {
+    pub fn slice_raw(self, bytes: &[u8], gc: &mut GarbageCollector) -> StringRef {
         let owner = self.owner();
         debug_assert!(owner.is_owned());
-        unsafe { Self::new_borrowed(owner, bytes, gc) }
+        assert!(owner.bytes().subslice_range(bytes).is_some());
+        unsafe { Self::new_borrowed(owner, NonNull::from(bytes), gc) }
     }
 
     pub fn slice(&self, offset: usize, len: usize, gc: &mut GarbageCollector) -> Option<StringRef> {
-        let bytes = NonNull::from(self.bytes().get(offset..offset + len)?);
-        Some(unsafe { self.slice_raw(bytes, gc) })
+        let bytes = self.bytes().get(offset..offset + len)?;
+        Some(self.slice_raw(bytes, gc))
     }
 }
 

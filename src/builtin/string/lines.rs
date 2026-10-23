@@ -11,7 +11,7 @@ pub struct Lines {
 }
 
 impl Lines {
-    fn next(&mut self) -> Option<NonNull<[u8]>> {
+    fn next(&mut self) -> Option<&[u8]> {
         let bytes = unsafe { self.data.as_ref() };
         if bytes.is_empty() {
             return None;
@@ -29,7 +29,7 @@ impl Lines {
                 line = trimmed;
             }
         }
-        Some(NonNull::from(line))
+        Some(line)
     }
 }
 
@@ -58,7 +58,7 @@ impl Function for Lines {
         self.data = NonNull::from(owner.bytes());
         match self.next() {
             Some(result) => {
-                let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
+                let result = owner.slice_raw(result, vm.gc_mut());
                 Action::Output(Value::from(result))
             }
             None => Action::Stop,
@@ -69,7 +69,7 @@ impl Function for Lines {
         let owner = self.owner.unwrap();
         match self.next() {
             Some(result) => {
-                let result = unsafe { owner.slice_raw(result, vm.gc_mut()) };
+                let result = owner.slice_raw(result, vm.gc_mut());
                 Action::Output(Value::from(result))
             }
             None => Action::Stop,

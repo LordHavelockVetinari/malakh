@@ -19,5 +19,8 @@ pub mod replace_first;
 pub mod replace_last;
 pub mod slice;
 pub mod starts_with;
+pub mod trim;
+pub mod trim_end;
+pub mod trim_start;
 pub mod uppercase;
 pub mod words;
