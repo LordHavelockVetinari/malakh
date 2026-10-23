@@ -1,5 +1,5 @@
 Main -> {
-    s := "abc\t\r\n\"\\\x41\x42\x43\xfFa\uAaAa\U0001fa0000"
+    s := "abc\t\r\n\"\\\x41\x42\x43\xfFa\uAaAa\u{0}\u{ff}\u{0001fa00}00"
     out [String::Bytes s]...
     
     out '"C:\Users\Malakh"'

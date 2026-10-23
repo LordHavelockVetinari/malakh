@@ -316,7 +316,7 @@ Every value in Malakh belongs to one of five types:
   * `\\` - backslash.
   * `\xDD` - two-digit hexadecimal byte.
   * `\uDDDD` - four-digit hexadecimal character code.
-  * `\UDDDDDDDD` - eight-digit hexadecimal character code.
+  * `\u{DDDDDD}` - multi-digit hexadecimal character code.
 - **Symbol:** symbols are like one-word strings.
   Unlike strings, symbols may not (normally) contain spaces or special
   characters,

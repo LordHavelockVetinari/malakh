@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use malachite::Integer;
 use malachite::base::num::conversion::traits::FromStringBase;
 use std::collections::{HashMap, VecDeque};
@@ -255,6 +256,16 @@ impl Scanner {
         result
     }
 
+    fn write_codepoint(&self, codepoint: u32, output: &mut Vec<u8>) -> Result<(), String> {
+        let Ok(c) = char::try_from(codepoint) else {
+            return Err(format!("invalid character code: U+{:04x}", codepoint));
+        };
+        let mut buffer = [0; 4];
+        let encoded = c.encode_utf8(&mut buffer);
+        output.extend(encoded.as_bytes());
+        Ok(())
+    }
+
     fn read_escape_sequence(
         &mut self,
         index: &mut usize,
@@ -285,32 +296,52 @@ impl Scanner {
                     return self.err("expected 2 hexadecimal digits after `\\x`");
                 };
             }
-            b'u' | b'U' => {
-                let mut digits = [0; 8];
-                let len = match c {
-                    b'u' => 4,
-                    b'U' => 8,
-                    _ => unreachable!(),
-                };
-                for (digit, i) in digits.iter_mut().zip(0..len) {
-                    if let Some(d) = self.char_at(*index + i)?
-                        && let Some(d) = Self::from_hex_digit(d)
-                    {
-                        *digit = d;
-                    } else {
+            b'u' if self.char_at(*index)? == Some(b'{') => {
+                *index += 1;
+                let mut digits = ArrayVec::<u8, 8>::new();
+                loop {
+                    let Some(c) = self.char_at(*index)? else {
+                        return self.err("unfinished `\\u{...}` escape");
+                    };
+                    let Some(digit) = Self::from_hex_digit(c) else {
+                        if c == b'}' {
+                            *index += 1;
+                            break;
+                        }
+                        return self.err("unexpected character in `\\u{...}`");
+                    };
+                    if digits.try_push(digit).is_err() {
                         self.skip(*index);
-                        return self.err(format!("expected {} hexadecimal digits", len));
+                        return self.err("too many digits in `\\u{...}` (up to 8 allowed)");
                     }
+                    *index += 1;
                 }
-                let codepoint = Self::from_hex_digits(&digits[..len]);
-                let Ok(c) = char::try_from(codepoint) else {
+                if digits.is_empty() {
                     self.skip(*index);
-                    return self.err(format!("invalid unicode codepoint: {:#x}", codepoint));
+                    return self.err("no digits in `\\u{...}`");
+                }
+                let codepoint = Self::from_hex_digits(&digits);
+                if let Err(error) = self.write_codepoint(codepoint, output) {
+                    self.skip(*index);
+                    return self.err(error);
+                }
+            }
+            b'u' => {
+                if let Some(digit1) = self.char_at(*index)?.and_then(Self::from_hex_digit)
+                    && let Some(digit2) = self.char_at(*index + 1)?.and_then(Self::from_hex_digit)
+                    && let Some(digit3) = self.char_at(*index + 2)?.and_then(Self::from_hex_digit)
+                    && let Some(digit4) = self.char_at(*index + 3)?.and_then(Self::from_hex_digit)
+                {
+                    let codepoint = Self::from_hex_digits(&[digit1, digit2, digit3, digit4]);
+                    if let Err(error) = self.write_codepoint(codepoint, output) {
+                        self.skip(*index);
+                        return self.err(error);
+                    }
+                    *index += 4;
+                } else {
+                    self.skip(*index);
+                    return self.err("expected 4 hexadecimal digits after `\\u`");
                 };
-                let mut buf = [0; 4];
-                let s = c.encode_utf8(&mut buf);
-                output.extend_from_slice(s.as_bytes());
-                *index += len;
             }
             _ => {
                 self.skip(*index);
