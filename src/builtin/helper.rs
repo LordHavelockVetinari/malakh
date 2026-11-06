@@ -460,7 +460,7 @@ macro_rules! input_before_input {
             $self.$field = ::std::option::Option::Some(new_value);
             return Action::Input;
         } else {
-            None
+            ::std::option::Option::None
         }
     };
 }
@@ -473,12 +473,22 @@ macro_rules! input_before_optional_input {
             $self.$field = ::std::option::Option::Some(new_value);
             return Action::OptionalInput;
         } else {
-            None
+            ::std::option::Option::None
         }
     };
 }
 
 macro_rules! last_input {
+    ($self:ident . $field:ident = $maybe_input:expr) => {
+        if let ::std::option::Option::Some(result) = $self.$field {
+            Some(result)
+        } else if let ::std::option::Option::Some(new_value) = $maybe_input {
+            $self.$field = ::std::option::Option::Some(new_value);
+            ::std::option::Option::Some(new_value)
+        } else {
+            ::std::option::Option::None
+        }
+    };
     ($maybe_input:expr) => {
         $maybe_input
     };

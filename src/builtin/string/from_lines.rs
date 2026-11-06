@@ -8,7 +8,7 @@ use crate::vm::{Value, Vm};
 
 pub struct FromLines {
     buffer: StringBuffer,
-    is_first_word: bool,
+    is_first_line: bool,
 }
 
 impl helper::BasicAggregator for FromLines {
@@ -17,7 +17,7 @@ impl helper::BasicAggregator for FromLines {
     fn new(vm: &mut Vm) -> Self {
         Self {
             buffer: StringBuffer::new(vm.gc_mut()),
-            is_first_word: true,
+            is_first_line: true,
         }
     }
 
@@ -31,7 +31,7 @@ impl helper::BasicAggregator for FromLines {
 
     fn put(&mut self, value: Value, vm: &mut Vm) {
         let mut writer = self.buffer.writer(vm.gc_mut());
-        if !mem::take(&mut self.is_first_word) {
+        if !mem::take(&mut self.is_first_line) {
             writer.write_all(b"\n").unwrap();
         }
         value.write_to(&mut writer).unwrap();

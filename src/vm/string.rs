@@ -53,6 +53,10 @@ impl StringRef {
         unsafe { self.bytes_non_null().as_ref() }
     }
 
+    pub fn is_empty(self) -> bool {
+        self.bytes_non_null().is_empty()
+    }
+
     fn payload_ptr(self) -> NonNull<u8> {
         unsafe { self.0.add(1).cast::<u8>() }
     }

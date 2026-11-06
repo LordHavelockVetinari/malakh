@@ -31,6 +31,25 @@ Main -> {
     AssertErr { String::Words "\xff" }
     AssertErr { String::Words "\x80" }
 
+    join := String::Join
+    Assert ([Process::State join] == .In)
+    join ", "
+    out [join]
+    join "x"
+    out [join]
+    join 1
+    out [join]
+    join 2
+    out [join] [join]
+    AssertErr { String::Join 1 }
+
+    split := String::Split "a, b, c" ", "
+    out [split]...
+    out [String::Split "" "x"]...
+    out [String::Split "a" "x"]...
+    AssertErr { String::Split "abc" "" }
+    AssertErr { String::Split "" "" }
+
     out [String::At "Hello, World!" 4]
     out [String::At "α" 0]
     out [String::At "α" 1]

@@ -24,3 +24,5 @@ pub mod trim_end;
 pub mod trim_start;
 pub mod uppercase;
 pub mod words;
+pub mod join;
+pub mod split;
